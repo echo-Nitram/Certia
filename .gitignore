@@ -1,0 +1,36 @@
+# Dependencias
+node_modules/
+*/node_modules/
+
+# Variables de entorno — NUNCA subir al repo
+.env
+backend/.env
+frontend/.env
+
+# Builds
+dist/
+build/
+*/dist/
+*/build/
+
+# Prisma
+backend/prisma/migrations/*.sql
+# (conservar el directorio de migraciones pero no datos sensibles)
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Temporales
+*.tmp
+*.temp
+/tmp/
