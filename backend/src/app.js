@@ -23,6 +23,7 @@ const ALLOWED_ORIGINS = [
 ];
 const corsOptions = {
   origin: (origin, cb) => {
+    console.log(`[CORS] origin=${origin} allowed=${!origin || ALLOWED_ORIGINS.includes(origin)}`);
     if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
     cb(new Error('Not allowed by CORS'));
   },
