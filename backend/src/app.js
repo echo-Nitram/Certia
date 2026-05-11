@@ -35,8 +35,9 @@ initSocket(io);
 app.set('io', io);
 
 // ── Middleware global ─────────────────────────────────────────────────────────
-app.use(helmet());
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+app.use(helmet());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
