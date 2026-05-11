@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const emailService = require('../services/email.service');
 const { emitirAlCliente, emitirAlAdmin } = require('../services/socket.service');
+const webhookService = require('../services/webhook.service');
 
 const prisma = new PrismaClient();
 
@@ -36,6 +37,12 @@ async function vencimientoJob() {
         estadoNuevo: 'VENCIDO',
         motivoInterno: 'Vencimiento automático por cron job',
       },
+    });
+    await webhookService.disparar('certificado.vencido', {
+      expediente: sol.nExpediente,
+      cliente: sol.cliente.nombreEmpresa,
+      tipo_certificado: sol.tipoCert.nombre,
+      fecha_vencimiento: sol.fechaVencimiento,
     });
   }
 

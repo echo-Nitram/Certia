@@ -167,6 +167,20 @@ async function crear(req, res) {
   const clienteId = req.user.rol === 'cliente' ? req.user.id : req.body.clienteId;
   if (!clienteId) return res.status(400).json({ error: 'clienteId requerido.' });
 
+  // Validar solicitudOrigenId si se trata de una renovación
+  if (solicitudOrigenId) {
+    const origen = await prisma.solicitud.findUnique({ where: { id: solicitudOrigenId } });
+    if (!origen) {
+      return res.status(404).json({ error: 'Solicitud origen no encontrada.' });
+    }
+    if (origen.clienteId !== clienteId) {
+      return res.status(403).json({ error: 'No tenés permiso para renovar esa solicitud.' });
+    }
+    if (!['FINALIZADO', 'VENCIDO'].includes(origen.estadoActual)) {
+      return res.status(400).json({ error: 'Solo se pueden renovar solicitudes finalizadas o vencidas.' });
+    }
+  }
+
   // Verificar que el tipo esté habilitado para este cliente
   const habilitado = await prisma.clienteTipoCert.findUnique({
     where: { clienteId_tipoCertId: { clienteId, tipoCertId } },
@@ -235,12 +249,25 @@ async function crear(req, res) {
     tipoCert: tipoCert.nombre,
   });
 
-  // Webhook
+  // Webhook solicitud creada
   await webhookService.disparar('solicitud.creada', {
     expediente: nExpediente,
     cliente: { nombre: solicitud.cliente.nombreEmpresa, email: solicitud.cliente.email },
     tipo_certificado: { codigo: tipoCert.codigo, nombre: tipoCert.nombre },
   });
+
+  // Webhook renovación si aplica
+  if (solicitudOrigenId) {
+    const origen = await prisma.solicitud.findUnique({ where: { id: solicitudOrigenId }, select: { nExpediente: true } });
+    if (origen) {
+      await webhookService.disparar('renovacion.iniciada', {
+        expediente_nuevo: nExpediente,
+        expediente_origen: origen.nExpediente,
+        cliente: { nombre: solicitud.cliente.nombreEmpresa, email: solicitud.cliente.email },
+        tipo_certificado: { codigo: tipoCert.codigo, nombre: tipoCert.nombre },
+      });
+    }
+  }
 
   return res.status(201).json(solicitud);
 }
@@ -445,7 +472,7 @@ async function subirPdfFirmado(req, res) {
     urlFirmado,
     qrToken
   );
-  emitirAlCliente(solicitud.clienteId, 'certificado:finalizado', {
+  emitirAlCliente(solicitud.clienteId, 'certificado:emitido', {
     nExpediente: solicitud.nExpediente,
     urlDescarga: urlFirmado,
     qrToken,
@@ -499,4 +526,50 @@ async function generarPdfSinFirma(req, res) {
   return res.json({ url });
 }
 
-module.exports = { listar, obtener, crear, cambiarEstado, subirPdfFirmado, generarPdfSinFirma };
+// ── PATCH /api/solicitudes/:id/datos ─────────────────────────────────────────
+async function editarDatos(req, res) {
+  const { id } = req.params;
+  const nuevosDatos = req.body;
+
+  const solicitud = await prisma.solicitud.findUnique({
+    where: { id },
+    include: { cliente: true, tipoCert: true },
+  });
+  if (!solicitud) return res.status(404).json({ error: 'Solicitud no encontrada.' });
+
+  if (solicitud.clienteId !== req.user.id) {
+    return res.status(403).json({ error: 'Acceso denegado.' });
+  }
+  if (solicitud.estadoActual !== 'OBSERVADO') {
+    return res.status(400).json({ error: 'Solo se pueden editar solicitudes en estado OBSERVADO.' });
+  }
+  if (!nuevosDatos || Object.keys(nuevosDatos).length === 0) {
+    return res.status(400).json({ error: 'Los nuevos datos son requeridos.' });
+  }
+
+  await prisma.$transaction([
+    prisma.solicitud.update({
+      where: { id },
+      data: { datosFormulario: nuevosDatos, estadoActual: 'EN_REVISION', actualizadoEn: new Date() },
+    }),
+    prisma.historialEstado.create({
+      data: {
+        solicitudId: id,
+        estadoAnterior: 'OBSERVADO',
+        estadoNuevo: 'EN_REVISION',
+        motivoCliente: 'Cliente corrigió y reenvió la solicitud',
+      },
+    }),
+  ]);
+
+  const solicitudActualizada = { ...solicitud, estadoActual: 'EN_REVISION' };
+  await notificarCambioEstado(solicitudActualizada, 'OBSERVADO', 'EN_REVISION', null);
+  emitirAlCliente(solicitud.clienteId, 'solicitud:reenviada', {
+    solicitudId: id,
+    nExpediente: solicitud.nExpediente,
+  });
+
+  return res.json({ ok: true });
+}
+
+module.exports = { listar, obtener, crear, cambiarEstado, editarDatos, subirPdfFirmado, generarPdfSinFirma };

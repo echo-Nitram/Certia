@@ -149,9 +149,28 @@ export default function SolicitudDetalle() {
             <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
               <h2 className="font-semibold text-gray-800">PDFs</h2>
               {solicitud.pdfBorradorUrl && solicitud.estadoActual === 'REVISION_PDF' && (
-                <div>
-                  <p className="text-sm text-gray-600 mb-2">Borrador para revisión:</p>
-                  <iframe src={solicitud.pdfBorradorUrl} className="w-full h-96 border border-gray-200 rounded-lg" title="PDF Borrador" />
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">Vista previa del borrador:</p>
+                  <iframe
+                    src={`${solicitud.pdfBorradorUrl}#toolbar=0`}
+                    className="w-full border border-gray-200 rounded-lg shadow-sm"
+                    style={{ height: 700 }}
+                    title="PDF Borrador"
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setEstadoNuevo('PENDIENTE_FIRMA')}
+                      className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition"
+                    >
+                      ✓ Aprobar — pasar a firma
+                    </button>
+                    <button
+                      onClick={() => setEstadoNuevo('EN_ELABORACION')}
+                      className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-600 transition"
+                    >
+                      ↩ Devolver para corrección
+                    </button>
+                  </div>
                 </div>
               )}
               {solicitud.estadoActual === 'PENDIENTE_FIRMA' && (

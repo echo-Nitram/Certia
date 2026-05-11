@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
 
-const EVENTOS = ['solicitud.creada','solicitud.estado_cambiado','certificado.finalizado','certificado.vencido','cliente.creado'];
+const EVENTOS = ['solicitud.creada','solicitud.estado_cambiado','certificado.finalizado','certificado.vencido','cliente.creado','renovacion.iniciada'];
 
 export default function Webhooks() {
   const qc = useQueryClient();

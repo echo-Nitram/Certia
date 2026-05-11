@@ -20,10 +20,9 @@ function initSocket(io) {
   io.on('connection', (socket) => {
     const { id, rol } = socket.user;
 
+    socket.join(`user:${id}`);
     if (rol === 'admin') {
-      socket.join('sala:admins');
-    } else if (rol === 'cliente') {
-      socket.join(`sala:cliente:${id}`);
+      socket.join('admins');
     }
 
     socket.on('disconnect', () => {});

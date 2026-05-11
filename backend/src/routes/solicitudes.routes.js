@@ -20,6 +20,9 @@ router.post(
 // Cambiar estado — solo admin
 router.patch('/:id/estado', roleMiddleware('admin'), ctrl.cambiarEstado);
 
+// Editar datos en OBSERVADO — solo cliente propietario
+router.patch('/:id/datos', roleMiddleware('cliente'), ctrl.editarDatos);
+
 // PDF sin firma (para descargar antes de firmar)
 router.post('/:id/pdf-sin-firma', roleMiddleware('admin'), ctrl.generarPdfSinFirma);
 

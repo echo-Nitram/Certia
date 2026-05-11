@@ -7,7 +7,7 @@ const MENSAJES = {
   'solicitud:nueva': (d) => `Nueva solicitud: ${d.nExpediente} — ${d.cliente}`,
   'solicitud:estado_cambiado': (d) => `${d.nExpediente}: cambió a ${d.estadoNuevo}`,
   'solicitud:observada': (d) => `Solicitud ${d.nExpediente} requiere correcciones`,
-  'certificado:finalizado': (d) => `¡Certificado emitido! ${d.nExpediente}`,
+  'certificado:emitido': (d) => `¡Certificado emitido! ${d.nExpediente}`,
   'certificado:vencimiento': (d) => `${d.nExpediente} vence en ${d.diasRestantes} días`,
   'pdf:borrador_listo': (d) => `Borrador listo para revisión: ${d.nExpediente}`,
   'firma:validacion_exitosa': (d) => `Firma válida — ${d.nExpediente} → FINALIZADO`,
@@ -17,7 +17,7 @@ const MENSAJES = {
 };
 
 const TIPOS_TOAST = {
-  'certificado:finalizado': 'success',
+  'certificado:emitido': 'success',
   'firma:validacion_exitosa': 'success',
   'solicitud:observada': 'error',
   'firma:validacion_fallida': 'error',

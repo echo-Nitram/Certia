@@ -50,6 +50,16 @@ app.use('/api/auth/login', rateLimit({
   message: { error: 'Demasiados intentos de login. Intente más tarde.' },
 }));
 
+// Rate limiting para solicitudes de OTP (5 por email/hora)
+app.use('/api/auth/admin/login', rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  keyGenerator: (req) => req.body?.email ?? req.ip,
+  message: { error: 'Demasiadas solicitudes de código OTP. Intentá nuevamente en 1 hora.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+}));
+
 // ── Rutas ────────────────────────────────────────────────────────────────────
 app.use('/api', routes);
 

@@ -32,20 +32,23 @@ async function disparar(evento, datos) {
   }
 }
 
-async function dispararConReintentos(wh, payload, evento, intentoActual = 1) {
-  const delays = [0, 5000, 30000, 300000]; // 0s, 5s, 30s, 5min
-  const delay = delays[intentoActual - 1] || 0;
+const DELAYS_REINTENTO_MS = [60000, 300000, 900000]; // 1min, 5min, 15min
 
-  if (delay > 0) await new Promise(r => setTimeout(r, delay));
+async function dispararConReintentos(wh, payload, evento, intentoActual = 1) {
+  // Primer intento inmediato; reintentos con backoff
+  if (intentoActual > 1) {
+    const delay = DELAYS_REINTENTO_MS[intentoActual - 2] ?? DELAYS_REINTENTO_MS.at(-1);
+    await new Promise(r => setTimeout(r, delay));
+  }
 
   let httpStatus = null;
   let error = null;
   let exito = false;
 
   try {
-    const headers = { 'Content-Type': 'application/json' };
+    const headers = { 'Content-Type': 'application/json', 'X-CERTIA-Event': evento };
     if (wh.secretToken) {
-      headers['X-CERTIA-Signature'] = firmarPayload(payload, wh.secretToken);
+      headers['X-CERTIA-Signature'] = `sha256=${firmarPayload(payload, wh.secretToken)}`;
     }
 
     const res = await axios.post(wh.url, payload, { headers, timeout: 10000 });

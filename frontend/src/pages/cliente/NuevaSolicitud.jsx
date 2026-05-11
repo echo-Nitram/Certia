@@ -1,24 +1,40 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
 
-const PASOS = ['Tipo', 'Datos', 'Adjunto', 'Confirmar'];
+const PASOS = ['Tipo', 'Datos', 'Confirmar'];
 
 export default function NuevaSolicitud() {
   const navigate = useNavigate();
-  const [paso, setPaso] = useState(0);
+  const [searchParams] = useSearchParams();
+  const renovacionDeId = searchParams.get('renovacionDe');
+
+  const [paso, setPaso] = useState(renovacionDeId ? 1 : 0);
   const [tipoCertId, setTipoCertId] = useState('');
   const [tipoCert, setTipoCert] = useState(null);
   const [datosFormulario, setDatosFormulario] = useState({});
   const [archivoComprobante, setArchivoComprobante] = useState(null);
-  const [subiendo, setSubiendo] = useState(false);
 
   const { data: tipos = [], isLoading: cargandoTipos } = useQuery({
     queryKey: ['mis-tipos'],
     queryFn: () => api.get('/tipos').then(r => r.data),
   });
+
+  // Pre-llenar datos de la solicitud origen si es renovación
+  useEffect(() => {
+    if (!renovacionDeId || tipos.length === 0) return;
+
+    api.get(`/solicitudes/${renovacionDeId}`).then(({ data: origen }) => {
+      const tipoOrigen = tipos.find(t => t.id === origen.tipoCertId);
+      if (tipoOrigen) {
+        setTipoCertId(tipoOrigen.id);
+        setTipoCert(tipoOrigen);
+        setDatosFormulario({ ...origen.datosFormulario });
+      }
+    }).catch(() => toast.error('No se pudo cargar la solicitud original.'));
+  }, [renovacionDeId, tipos]);
 
   function seleccionarTipo(t) {
     setTipoCertId(t.id);
@@ -32,7 +48,7 @@ export default function NuevaSolicitud() {
   function validarPaso1() {
     if (!tipoCert) return false;
     const requeridos = (tipoCert.camposFormulario || []).filter(c => c.requerido);
-    return requeridos.every(c => datosFormulario[c.nombre]?.trim());
+    return requeridos.every(c => datosFormulario[c.nombre]?.toString().trim());
   }
 
   const mutCrear = useMutation({
@@ -40,6 +56,7 @@ export default function NuevaSolicitud() {
       const form = new FormData();
       form.append('tipoCertId', tipoCertId);
       form.append('datosFormulario', JSON.stringify(datosFormulario));
+      if (renovacionDeId) form.append('solicitudOrigenId', renovacionDeId);
       if (archivoComprobante) form.append('comprobante', archivoComprobante);
       const { data } = await api.post('/solicitudes', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -47,7 +64,7 @@ export default function NuevaSolicitud() {
       return data;
     },
     onSuccess: (data) => {
-      toast.success('Solicitud enviada correctamente.');
+      toast.success(renovacionDeId ? 'Renovación enviada correctamente.' : 'Solicitud enviada correctamente.');
       navigate(`/cliente/solicitudes/${data.id}`);
     },
     onError: (err) => toast.error(err.response?.data?.error || 'Error al enviar la solicitud.'),
@@ -55,7 +72,16 @@ export default function NuevaSolicitud() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900">Nueva solicitud</h1>
+      <h1 className="text-2xl font-bold text-gray-900">
+        {renovacionDeId ? 'Renovar certificado' : 'Nueva solicitud'}
+      </h1>
+
+      {/* Banner de renovación */}
+      {renovacionDeId && tipoCert && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-700">
+          <span className="font-medium">⟳ Renovación en curso.</span> Los datos fueron pre-llenados desde el certificado anterior. Revisalos antes de continuar.
+        </div>
+      )}
 
       {/* Stepper */}
       <div className="flex items-center">
@@ -77,7 +103,7 @@ export default function NuevaSolicitud() {
           {cargandoTipos ? (
             <div className="text-center py-8 text-gray-400">Cargando tipos...</div>
           ) : tipos.length === 0 ? (
-            <p className="text-center py-8 text-gray-500">Tu empresa no tiene tipos habilitados aún. Contactá al Centro Islámico del Uruguay.</p>
+            <p className="text-center py-8 text-gray-500">Tu empresa no tiene tipos habilitados. Contactá al Centro Islámico del Uruguay.</p>
           ) : (
             tipos.map(t => (
               <button key={t.id} onClick={() => seleccionarTipo(t)}
@@ -102,6 +128,21 @@ export default function NuevaSolicitud() {
             <span className="font-bold text-certia-green text-sm bg-certia-green/10 px-2 py-0.5 rounded">{tipoCert.codigo}</span>
             <span className="font-medium text-gray-800">{tipoCert.nombre}</span>
           </div>
+
+          {/* Comprobante de pago en mismo paso */}
+          <div className="border border-dashed border-gray-300 rounded-lg p-4 space-y-2">
+            <p className="text-sm font-medium text-gray-700">Comprobante de pago <span className="text-gray-400 font-normal">(opcional, PDF/JPG/PNG, máx. 5 MB)</span></p>
+            <input
+              type="file"
+              accept="application/pdf,image/jpeg,image/png"
+              onChange={e => setArchivoComprobante(e.target.files[0])}
+              className="text-sm text-gray-600"
+            />
+            {archivoComprobante && (
+              <p className="text-xs text-certia-green font-medium">📎 {archivoComprobante.name}</p>
+            )}
+          </div>
+
           {(tipoCert.camposFormulario || []).map(campo => (
             <div key={campo.nombre}>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -137,7 +178,9 @@ export default function NuevaSolicitud() {
             </div>
           ))}
           <div className="flex gap-3 justify-end pt-2">
-            <button onClick={() => setPaso(0)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">← Volver</button>
+            {!renovacionDeId && (
+              <button onClick={() => setPaso(0)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">← Volver</button>
+            )}
             <button
               onClick={() => { if (validarPaso1()) setPaso(2); else toast.error('Completá los campos obligatorios.'); }}
               className="px-4 py-2 text-sm bg-certia-green text-white rounded-lg hover:bg-certia-green-dark"
@@ -148,36 +191,8 @@ export default function NuevaSolicitud() {
         </div>
       )}
 
-      {/* Paso 2: Comprobante de pago */}
-      {paso === 2 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-          <h2 className="font-semibold text-gray-800">Comprobante de pago</h2>
-          <p className="text-sm text-gray-500">
-            Adjuntá el comprobante de pago del arancel correspondiente (PDF, JPG o PNG, máx. 5 MB).
-            Este paso es opcional — podés adjuntarlo luego.
-          </p>
-          <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center">
-            <input
-              type="file"
-              accept="application/pdf,image/jpeg,image/png"
-              onChange={e => setArchivoComprobante(e.target.files[0])}
-              className="text-sm text-gray-600"
-            />
-            {archivoComprobante && (
-              <p className="mt-2 text-sm text-certia-green font-medium">{archivoComprobante.name}</p>
-            )}
-          </div>
-          <div className="flex gap-3 justify-end">
-            <button onClick={() => setPaso(1)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">← Volver</button>
-            <button onClick={() => setPaso(3)} className="px-4 py-2 text-sm bg-certia-green text-white rounded-lg hover:bg-certia-green-dark">
-              {archivoComprobante ? 'Continuar →' : 'Omitir por ahora →'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Paso 3: Confirmación */}
-      {paso === 3 && tipoCert && (
+      {/* Paso 2: Confirmación */}
+      {paso === 2 && tipoCert && (
         <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
           <h2 className="font-semibold text-gray-800">Confirmar solicitud</h2>
           <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
@@ -185,6 +200,12 @@ export default function NuevaSolicitud() {
               <span className="text-gray-500 w-32 shrink-0">Tipo:</span>
               <span className="font-medium text-gray-800">{tipoCert.codigo} — {tipoCert.nombre}</span>
             </div>
+            {renovacionDeId && (
+              <div className="flex gap-2">
+                <span className="text-gray-500 w-32 shrink-0">Tipo:</span>
+                <span className="text-blue-600 font-medium">Renovación</span>
+              </div>
+            )}
             {Object.entries(datosFormulario).filter(([, v]) => v).map(([k, v]) => (
               <div key={k} className="flex gap-2">
                 <span className="text-gray-500 w-32 shrink-0 capitalize">{k.replace(/_/g, ' ')}:</span>
@@ -199,16 +220,16 @@ export default function NuevaSolicitud() {
             )}
           </div>
           <p className="text-xs text-gray-500">
-            Al enviar la solicitud, un operador del Centro Islámico del Uruguay la revisará y te notificará sobre su estado por email.
+            Al enviar, un operador del Centro Islámico del Uruguay revisará la solicitud y te notificará por email.
           </p>
           <div className="flex gap-3 justify-end">
-            <button onClick={() => setPaso(2)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">← Volver</button>
+            <button onClick={() => setPaso(1)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">← Volver</button>
             <button
               onClick={() => mutCrear.mutate()}
-              disabled={mutCrear.isPending || subiendo}
+              disabled={mutCrear.isPending}
               className="px-6 py-2 text-sm bg-certia-green text-white font-medium rounded-lg hover:bg-certia-green-dark disabled:opacity-60"
             >
-              {mutCrear.isPending ? 'Enviando...' : 'Enviar solicitud'}
+              {mutCrear.isPending ? 'Enviando...' : renovacionDeId ? 'Enviar renovación' : 'Enviar solicitud'}
             </button>
           </div>
         </div>

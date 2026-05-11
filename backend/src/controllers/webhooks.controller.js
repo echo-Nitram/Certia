@@ -10,6 +10,7 @@ const EVENTOS_VALIDOS = [
   'certificado.finalizado',
   'certificado.vencido',
   'cliente.creado',
+  'renovacion.iniciada',
 ];
 
 async function listar(req, res) {
