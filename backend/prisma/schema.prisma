@@ -1,0 +1,287 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum EstadoSolicitud {
+  PENDIENTE
+  EN_REVISION
+  OBSERVADO
+  PAGO_VALIDADO
+  EN_ELABORACION
+  REVISION_PDF
+  PENDIENTE_FIRMA
+  FINALIZADO
+  RECHAZADO
+  VENCIDO
+}
+
+enum TipoComentario {
+  INTERNO
+  VISIBLE
+}
+
+enum EstadoEnvio {
+  PENDIENTE
+  ENVIADO
+  FALLIDO
+}
+
+// ─── Modelos ──────────────────────────────────────────────────────────────────
+
+model Admin {
+  id             String    @id @default(cuid())
+  nombre         String
+  email          String    @unique
+  passwordHash   String
+  activo         Boolean   @default(true)
+  creadoEn       DateTime  @default(now())
+  actualizadoEn  DateTime  @updatedAt
+
+  otpCodes        OtpCode[]
+  clientesCreados Cliente[]       @relation("ClienteCreadoPor")
+  historialEstados HistorialEstado[]
+  versionesPlantilla VersionPlantilla[]
+  webhooks        Webhook[]       @relation("WebhookCreadoPor")
+  configuraciones Configuracion[]
+  auditoria       Auditoria[]
+  comentarios     Comentario[]
+
+  @@map("admins")
+}
+
+model OtpCode {
+  id               String   @id @default(cuid())
+  adminId          String
+  codigoHash       String
+  expiraEn         DateTime
+  usado            Boolean  @default(false)
+  intentosFallidos Int      @default(0)
+  creadoEn         DateTime @default(now())
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@map("otp_codes")
+}
+
+model Cliente {
+  id            String   @id @default(cuid())
+  nombreEmpresa String
+  email         String   @unique
+  passwordHash  String
+  activo        Boolean  @default(true)
+  creadoPorId   String
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  creadoPor      Admin              @relation("ClienteCreadoPor", fields: [creadoPorId], references: [id])
+  tiposHabilitados ClienteTipoCert[]
+  solicitudes    Solicitud[]
+
+  @@map("clientes")
+}
+
+model TipoCertificado {
+  id                String   @id @default(cuid())
+  codigo            String   @unique
+  nombre            String
+  descripcion       String?
+  camposFormulario  Json
+  plantillaHtml     String   @db.Text
+  variablesMapeadas Json
+  activo            Boolean  @default(false)
+  versionActual     Int      @default(1)
+  creadoEn          DateTime @default(now())
+  actualizadoEn     DateTime @updatedAt
+
+  versiones        VersionPlantilla[]
+  clientesHabilitados ClienteTipoCert[]
+  solicitudes      Solicitud[]
+
+  @@map("tipos_certificado")
+}
+
+model VersionPlantilla {
+  id          String   @id @default(cuid())
+  tipoCertId  String
+  html        String   @db.Text
+  version     Int
+  nota        String?
+  creadoPorId String
+  creadoEn    DateTime @default(now())
+
+  tipoCert  TipoCertificado @relation(fields: [tipoCertId], references: [id], onDelete: Cascade)
+  creadoPor Admin           @relation(fields: [creadoPorId], references: [id])
+
+  @@unique([tipoCertId, version])
+  @@map("versiones_plantilla")
+}
+
+model ClienteTipoCert {
+  clienteId     String
+  tipoCertId    String
+  habilitadoPor String
+  habilitadoEn  DateTime @default(now())
+
+  cliente   Cliente         @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  tipoCert  TipoCertificado @relation(fields: [tipoCertId], references: [id], onDelete: Cascade)
+
+  @@id([clienteId, tipoCertId])
+  @@map("cliente_tipo_cert")
+}
+
+model Solicitud {
+  id                String          @id @default(cuid())
+  nExpediente       String          @unique
+  clienteId         String
+  tipoCertId        String
+  solicitudOrigenId String?
+  datosFormulario   Json
+  estadoActual      EstadoSolicitud @default(PENDIENTE)
+  pdfBorradorUrl    String?
+  pdfSinFirmaUrl    String?
+  pdfFirmadoUrl     String?
+  qrToken           String?         @unique
+  fechaEmision      DateTime?
+  fechaVencimiento  DateTime?
+  creadoEn          DateTime        @default(now())
+  actualizadoEn     DateTime        @updatedAt
+
+  cliente        Cliente          @relation(fields: [clienteId], references: [id])
+  tipoCert       TipoCertificado  @relation(fields: [tipoCertId], references: [id])
+  solicitudOrigen Solicitud?      @relation("Renovaciones", fields: [solicitudOrigenId], references: [id])
+  renovaciones   Solicitud[]      @relation("Renovaciones")
+
+  historialEstados HistorialEstado[]
+  comentarios      Comentario[]
+  adjuntos         Adjunto[]
+  notificaciones   Notificacion[]
+
+  @@map("solicitudes")
+}
+
+model HistorialEstado {
+  id              String          @id @default(cuid())
+  solicitudId     String
+  estadoAnterior  EstadoSolicitud?
+  estadoNuevo     EstadoSolicitud
+  adminId         String?
+  motivoInterno   String?
+  motivoCliente   String?
+  fecha           DateTime        @default(now())
+
+  solicitud Solicitud @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
+  admin     Admin?    @relation(fields: [adminId], references: [id])
+
+  @@map("historial_estados")
+}
+
+model Comentario {
+  id          String         @id @default(cuid())
+  solicitudId String
+  adminId     String
+  tipo        TipoComentario @default(INTERNO)
+  texto       String         @db.Text
+  creadoEn    DateTime       @default(now())
+
+  solicitud Solicitud @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
+  admin     Admin     @relation(fields: [adminId], references: [id])
+
+  @@map("comentarios")
+}
+
+model Adjunto {
+  id           String   @id @default(cuid())
+  solicitudId  String
+  tipo         String
+  archivoUrl   String
+  nombreOriginal String
+  mimeType     String
+  subidoEn     DateTime @default(now())
+
+  solicitud Solicitud @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
+
+  @@map("adjuntos")
+}
+
+model Auditoria {
+  id              String   @id @default(cuid())
+  adminId         String?
+  entidad         String
+  accion          String
+  datosAnteriores Json?
+  datosNuevos     Json?
+  ipOrigen        String?
+  fecha           DateTime @default(now())
+
+  admin Admin? @relation(fields: [adminId], references: [id])
+
+  @@map("auditoria")
+}
+
+model Notificacion {
+  id               String      @id @default(cuid())
+  solicitudId      String?
+  destinatarioTipo String
+  email            String
+  asunto           String
+  estadoEnvio      EstadoEnvio @default(PENDIENTE)
+  intentos         Int         @default(0)
+  enviadoEn        DateTime?
+  error            String?
+  creadoEn         DateTime    @default(now())
+
+  solicitud Solicitud? @relation(fields: [solicitudId], references: [id], onDelete: SetNull)
+
+  @@map("notificaciones")
+}
+
+model Webhook {
+  id          String   @id @default(cuid())
+  url         String
+  eventos     Json
+  secretToken String?
+  activo      Boolean  @default(true)
+  creadoPorId String
+  creadoEn    DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  creadoPor Admin             @relation("WebhookCreadoPor", fields: [creadoPorId], references: [id])
+  entregas  WebhookEntrega[]
+
+  @@map("webhooks")
+}
+
+model WebhookEntrega {
+  id          String   @id @default(cuid())
+  webhookId   String
+  evento      String
+  payload     Json
+  httpStatus  Int?
+  exito       Boolean  @default(false)
+  intentos    Int      @default(1)
+  error       String?
+  disparadoEn DateTime @default(now())
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@map("webhook_entregas")
+}
+
+model Configuracion {
+  clave         String   @id
+  valor         String   @db.Text
+  descripcion   String?
+  actualizadoPorId String?
+  actualizadoEn DateTime @updatedAt
+
+  actualizadoPor Admin? @relation(fields: [actualizadoPorId], references: [id])
+
+  @@map("configuracion")
+}
