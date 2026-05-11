@@ -18,6 +18,7 @@ const server = http.createServer(app);
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:4173',
+  'https://certia-ten.vercel.app',
   ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map(s => s.trim()) : []),
 ];
 const corsOptions = {
