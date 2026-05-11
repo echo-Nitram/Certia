@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const cors = require('cors');
 const helmet = require('helmet');
 const { rateLimit } = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
@@ -14,31 +13,39 @@ const { initJobs } = require('./jobs');
 const app = express();
 const server = http.createServer(app);
 
-// ── CORS origins ─────────────────────────────────────────────────────────────
+// ── CORS ──────────────────────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:4173',
   'https://certia-ten.vercel.app',
   ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map(s => s.trim()) : []),
 ];
-const corsOptions = {
-  origin: (origin, cb) => {
-    console.log(`[CORS] origin=${origin} allowed=${!origin || ALLOWED_ORIGINS.includes(origin)}`);
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
-    cb(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
-};
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  console.log(`[REQ] ${req.method} ${req.path} origin=${origin}`);
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  } else if (!origin) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,Cookie');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 
 // ── Socket.IO ────────────────────────────────────────────────────────────────
-const io = new Server(server, { cors: corsOptions });
+const io = new Server(server, {
+  cors: { origin: ALLOWED_ORIGINS, credentials: true },
+});
 initSocket(io);
 app.set('io', io);
 
 // ── Middleware global ─────────────────────────────────────────────────────────
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
