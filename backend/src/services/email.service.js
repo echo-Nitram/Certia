@@ -57,7 +57,8 @@ function baseTemplate(contenido) {
 
 async function enviar({ to, subject, html }) {
   if (!process.env.SMTP_HOST) {
-    console.log(`[EMAIL] Simulado a ${to}: ${subject}`);
+    const otp = html.match(/\b\d{6}\b/)?.[0];
+    console.log(`[EMAIL] Simulado → ${to} | ${subject}${otp ? ` | OTP: ${otp}` : ''}`);
     return;
   }
   await getTransporter().sendMail({ from: FROM, to, subject, html });
