@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const cors = require('cors');
 const helmet = require('helmet');
 const { rateLimit } = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
@@ -21,21 +22,27 @@ const ALLOWED_ORIGINS = [
   ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map(s => s.trim()) : []),
 ];
 
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  console.log(`[REQ] ${req.method} ${req.path} origin=${origin}`);
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Vary', 'Origin');
-  } else if (!origin) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  }
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,Cookie');
-  if (req.method === 'OPTIONS') return res.sendStatus(204);
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`Origin not allowed: ${origin}`));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  optionsSuccessStatus: 204,
+};
+
+app.use((req, _res, next) => {
+  console.log(`[REQ] ${req.method} ${req.path} origin=${req.headers.origin}`);
   next();
 });
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // ── Socket.IO ────────────────────────────────────────────────────────────────
 const io = new Server(server, {
@@ -82,6 +89,13 @@ app.use('/api', routes);
 
 // ── Error handler ─────────────────────────────────────────────────────────────
 app.use((err, req, res, _next) => {
+  // Ensure CORS headers are present even in error responses
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
   console.error(err);
   res.status(err.status || 500).json({ error: err.message || 'Error interno del servidor' });
 });
