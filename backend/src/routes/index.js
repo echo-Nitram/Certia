@@ -9,5 +9,6 @@ router.use('/export', require('./export.routes'));
 router.use('/ia', require('./ia.routes'));
 router.use('/configuracion', require('./configuracion.routes'));
 router.use('/auditoria', require('./auditoria.routes'));
+router.use('/verify', require('./verify.routes'));
 
 module.exports = router;
