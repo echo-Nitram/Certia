@@ -325,6 +325,16 @@ const CONFIGURACIONES = [
 ];
 
 async function main() {
+  const checkOnly = process.argv.includes('--check');
+
+  if (checkOnly) {
+    const count = await prisma.admin.count();
+    if (count > 0) {
+      console.log('✅ Base de datos ya inicializada, saltando seed.');
+      return;
+    }
+  }
+
   console.log('🌱 Iniciando seed de CERTIA v3...\n');
 
   // Admin por defecto
