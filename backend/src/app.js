@@ -100,9 +100,13 @@ app.use((err, req, res, _next) => {
   res.status(err.status || 500).json({ error: err.message || 'Error interno del servidor' });
 });
 
-// Captura rechazos de promesas no manejadas (async controllers sin try/catch en Express 4)
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
   console.error('Unhandled Promise Rejection:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
 });
 
 const PORT = process.env.PORT || 3000;
