@@ -74,6 +74,9 @@ app.use('/api/auth/admin/login', rateLimit({
   message: { error: 'Demasiadas solicitudes de código OTP. Intentá nuevamente en 1 hora.' },
 }));
 
+// ── Health check ──────────────────────────────────────────────────────────────
+app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+
 // ── Rutas ─────────────────────────────────────────────────────────────────────
 app.use('/api', routes);
 
