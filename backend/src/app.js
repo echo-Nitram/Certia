@@ -63,7 +63,7 @@ app.use('/api', rateLimit({
 app.use('/api/auth/login', rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  message: { error: 'Demasiados intentos de login. Intente más tarde.' },
+  message: { error: 'Demasiados intentos de login.' },
 }));
 
 // Rate limiting específico para OTP (5 por hora por email)
@@ -73,6 +73,9 @@ app.use('/api/auth/admin/login', rateLimit({
   keyGenerator: (req) => req.body?.email ?? req.ip,
   message: { error: 'Demasiadas solicitudes de código OTP. Intentá nuevamente en 1 hora.' },
 }));
+
+// ── Health check ──────────────────────────────────────────────────────────────
+app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 // ── Rutas ─────────────────────────────────────────────────────────────────────
 app.use('/api', routes);
