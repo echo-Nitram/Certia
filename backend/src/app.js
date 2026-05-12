@@ -1,5 +1,4 @@
 require('dotenv').config();
-require('express-async-errors');
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -85,6 +84,11 @@ app.use('/api', routes);
 app.use((err, req, res, _next) => {
   console.error(err);
   res.status(err.status || 500).json({ error: err.message || 'Error interno del servidor' });
+});
+
+// Captura rechazos de promesas no manejadas (async controllers sin try/catch en Express 4)
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Promise Rejection:', reason);
 });
 
 const PORT = process.env.PORT || 3000;
