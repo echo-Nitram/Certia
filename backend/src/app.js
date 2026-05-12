@@ -1,4 +1,5 @@
 require('dotenv').config();
+require('express-async-errors');
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -59,8 +60,8 @@ app.use('/api', rateLimit({
   message: { error: 'Demasiadas solicitudes. Intente más tarde.' },
 }));
 
-// Rate limiting específico para login
-app.use('/api/auth/login', rateLimit({
+// Rate limiting específico para login de clientes
+app.use('/api/auth/cliente/login', rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: { error: 'Demasiados intentos de login.' },

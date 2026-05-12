@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './stores/auth.store';
+import { useRestoreSession } from './hooks/useRestoreSession';
 
 // Layouts
 import AdminLayout from './components/AdminLayout';
@@ -46,6 +47,16 @@ function RootRedirect() {
 }
 
 export default function App() {
+  const restoring = useRestoreSession();
+
+  if (restoring) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin w-8 h-8 border-4 border-certia-green border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
   return (
     <Routes>
       {/* Root */}
