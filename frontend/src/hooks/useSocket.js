@@ -13,7 +13,7 @@ export function useSocket(handlers = {}) {
     if (!accessToken) return;
 
     if (!socketInstance) {
-      socketInstance = io('/', {
+      socketInstance = io(import.meta.env.VITE_SOCKET_URL || 'https://certia-production-14da.up.railway.app', {
         auth: { token: accessToken },
         transports: ['websocket'],
         reconnectionAttempts: 5,
