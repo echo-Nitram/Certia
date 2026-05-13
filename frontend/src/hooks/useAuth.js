@@ -6,11 +6,6 @@ export function useAuth() {
 
   async function loginAdmin(email, password) {
     const { data } = await api.post('/auth/admin/login', { email, password });
-    return data; // { otpRequerido: true, adminId }
-  }
-
-  async function verifyOtp(adminId, codigo) {
-    const { data } = await api.post('/auth/admin/verify-otp', { adminId, codigo });
     setAuth(data.accessToken, data.usuario);
     return data;
   }
@@ -30,5 +25,5 @@ export function useAuth() {
   const esAdmin = usuario?.rol === 'admin';
   const esCliente = usuario?.rol === 'cliente';
 
-  return { usuario, estaAutenticado, esAdmin, esCliente, loginAdmin, verifyOtp, loginCliente, logout, setAuth };
+  return { usuario, estaAutenticado, esAdmin, esCliente, loginAdmin, loginCliente, logout, setAuth };
 }
