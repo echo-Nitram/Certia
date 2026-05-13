@@ -15,3 +15,15 @@ export const useAuthStore = create(
     }
   )
 );
+
+export const useHasHydrated = () => {
+  const [hydrated, setHydrated] = require('react').useState(
+    useAuthStore.persist.hasHydrated()
+  );
+  require('react').useEffect(() => {
+    const unsub = useAuthStore.persist.onFinishHydration(() => setHydrated(true));
+    setHydrated(useAuthStore.persist.hasHydrated());
+    return () => unsub();
+  }, []);
+  return hydrated;
+};

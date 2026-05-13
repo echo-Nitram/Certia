@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuthStore } from './stores/auth.store';
+import { useAuthStore, useHasHydrated } from './stores/auth.store';
 import { useRestoreSession } from './hooks/useRestoreSession';
 
 // Layouts
