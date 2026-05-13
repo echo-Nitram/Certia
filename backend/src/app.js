@@ -73,10 +73,10 @@ app.use('/api/auth/cliente/login', rateLimit({
   message: { error: 'Demasiados intentos de login.' },
 }));
 
-// Rate limiting específico para OTP (5 por hora por email)
+// Rate limiting para admin login (20 por hora por email)
 app.use('/api/auth/admin/login', rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 5,
+  max: 20,
   keyGenerator: (req) => req.body?.email ?? req.ip,
   message: { error: 'Demasiadas solicitudes de código OTP. Intentá nuevamente en 1 hora.' },
 }));
