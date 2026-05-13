@@ -36,6 +36,7 @@ function useMetricas() {
       return { porEstado, porVencer, pendientesFirma: pendientesFirma.data || pendientesFirma, sinGestionar72h };
     },
     refetchInterval: 30000,
+    retry: 2,
   });
 }
 
@@ -59,9 +60,25 @@ function TarjetaAlerta({ titulo, cantidad, color, link }) {
 }
 
 export default function Dashboard() {
-  const { data, isLoading } = useMetricas();
+  const { data, isLoading, isError, refetch } = useMetricas();
 
-  if (isLoading) return <div className="flex items-center justify-center h-64 text-gray-500">Cargando métricas...</div>;
+  if (isLoading) return (
+    <div className="flex items-center justify-center h-64 text-gray-500">
+      Cargando...
+    </div>
+  );
+
+  if (isError || !data) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <p className="text-gray-500 text-sm">Error al cargar las metricas</p>
+      <button
+        onClick={() => refetch()}
+        className="px-4 py-2 bg-green-700 text-white rounded-lg text-sm hover:bg-green-800"
+      >
+        Reintentar
+      </button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -70,7 +87,6 @@ export default function Dashboard() {
         <p className="text-gray-500 text-sm mt-1">Resumen del sistema en tiempo real</p>
       </div>
 
-      {/* Alertas */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <TarjetaAlerta
           titulo="Sin gestionar +72h"
@@ -85,14 +101,13 @@ export default function Dashboard() {
           link="/admin/solicitudes?estado=PENDIENTE_FIRMA"
         />
         <TarjetaAlerta
-          titulo="Vencen en 30 días"
+          titulo="Vencen en 30 dias"
           cantidad={data?.porVencer?.length || 0}
           color="blue"
           link="/admin/solicitudes?estado=FINALIZADO"
         />
       </div>
 
-      {/* Por estado */}
       <div>
         <h2 className="text-lg font-semibold text-gray-800 mb-3">Solicitudes activas por estado</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -102,10 +117,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Próximos a vencer */}
       {data?.porVencer?.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold text-gray-800 mb-3">Certificados próximos a vencer</h2>
+          <h2 className="text-lg font-semibold text-gray-800 mb-3">Certificados proximos a vencer</h2>
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
@@ -119,13 +133,13 @@ export default function Dashboard() {
                 {data.porVencer.map(s => (
                   <tr key={s.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
-                      <Link to={`/admin/solicitudes/${s.id}`} className="text-certia-green font-medium hover:underline">
+                      <Link to={`/admin/solicitudes/${s.id}`} className="text-green-700 font-medium hover:underline">
                         {s.nExpediente}
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-gray-600">{s.cliente?.nombreEmpresa}</td>
                     <td className="px-4 py-3 text-red-600 font-medium">
-                      {s.fechaVencimiento ? new Date(s.fechaVencimiento).toLocaleDateString('es-UY') : '—'}
+                      {s.fechaVencimiento ? new Date(s.fechaVencimiento).toLocaleDateString('es-UY') : '-'}
                     </td>
                   </tr>
                 ))}
