@@ -1,13 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import api from '../../lib/api';
+import { useAuthStore } from '../../stores/auth.store';
 import EstadoBadge from '../../components/EstadoBadge';
 
 const ESTADOS = ['PENDIENTE','EN_REVISION','OBSERVADO','PAGO_VALIDADO','EN_ELABORACION','REVISION_PDF','PENDIENTE_FIRMA'];
 
 function useMetricas() {
+  const { accessToken } = useAuthStore();
   return useQuery({
     queryKey: ['dashboard-metricas'],
+    enabled: !!accessToken,
     queryFn: async () => {
       const [activasRes, vencimientoRes, firmaRes] = await Promise.all([
         api.get('/solicitudes?limit=200'),

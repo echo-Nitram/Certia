@@ -1,28 +1,24 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useAuthStore } from '../stores/auth.store';
 
-const BASE_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api';
-
 export function useRestoreSession() {
-  const { accessToken, usuario, setAuth, clearAuth } = useAuthStore();
-  const [restoring, setRestoring] = useState(!accessToken && !!usuario);
+  const { accessToken, usuario } = useAuthStore();
+  // Si ya tenemos accessToken (persiste en localStorage), no hay nada que restaurar
+  // Si no hay ni token ni usuario, tampoco
+  // Solo intentamos restaurar si hay usuario pero no token
+  const needsRestore = !accessToken && !!usuario;
+  const [restoring, setRestoring] = useState(needsRestore);
 
   useEffect(() => {
-    if (!accessToken && usuario) {
-      axios
-        .post(`${BASE_URL}/auth/refresh`, {}, { withCredentials: true })
-        .then(({ data }) => {
-          setAuth(data.accessToken, usuario);
-        })
-        .catch(() => {
-          clearAuth();
-        })
-        .finally(() => {
-          setRestoring(false);
-        });
+    // Si tiene accessToken, ya está restaurado - no hacer nada
+    if (accessToken || !usuario) {
+      setRestoring(false);
+      return;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // No hay token pero hay usuario -> el token se perdió (expiró o fue a localStorage viejo)
+    // No intentamos refresh (falla cross-domain en Vercel) - simplemente dejamos pasar
+    // El RequireAdmin va a redirigir a login si no hay token
+    setRestoring(false);
   }, []);
 
   return restoring;
