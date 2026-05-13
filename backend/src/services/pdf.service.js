@@ -33,10 +33,20 @@ async function generarPdfBorrador(plantillaHtml, datosFormulario, solicitud, cli
 
   const htmlFinal = reemplazarVariables(plantillaHtml, variables);
 
-  const browser = await puppeteer.launch({
+  const launchOptions = {
     headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+    ],
+  };
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+
+  const browser = await puppeteer.launch(launchOptions);
 
   try {
     const page = await browser.newPage();
@@ -61,7 +71,7 @@ async function agregarMarcaDeAgua(pdfBuffer) {
 
   for (const page of pages) {
     const { width } = page.getSize();
-    page.drawText('Verificado vía CERTIA — certia.uy', {
+    page.drawText('Verificado via CERTIA — certia.uy', {
       x: 20,
       y: 12,
       size: 8,
@@ -98,7 +108,6 @@ async function agregarQrAlPdf(pdfBuffer, qrToken) {
 }
 
 async function validarFirmaDigital(pdfBuffer, pdfOriginalBuffer) {
-  // Verifica que sea un PDF válido
   if (!pdfBuffer.subarray(0, 4).toString() === '%PDF') {
     return { valido: false, error: 'El archivo no es un PDF válido.' };
   }
@@ -109,20 +118,17 @@ async function validarFirmaDigital(pdfBuffer, pdfOriginalBuffer) {
     return { valido: false, error: 'El archivo no es un PDF válido.' };
   }
 
-  // Verifica que contiene firma digital (busca byteRange o /Sig en el contenido)
   const contenido = pdfBuffer.toString('binary');
   const tieneFirma = contenido.includes('/ByteRange') || contenido.includes('/Sig') || contenido.includes('/AcroForm');
   if (!tieneFirma) {
     return { valido: false, error: 'El PDF no contiene una firma digital detectada. Repetí el proceso en firma.gub.uy.' };
   }
 
-  // Verifica coherencia de tamaño (no más de 3x el original)
   const MAX_FACTOR = 3;
   if (pdfOriginalBuffer && pdfBuffer.length > pdfOriginalBuffer.length * MAX_FACTOR) {
     return { valido: false, error: 'El tamaño del PDF firmado es inconsistente con el original. Verificá que firmaste el documento correcto.' };
   }
 
-  // Verifica límite de 20MB
   if (pdfBuffer.length > 20 * 1024 * 1024) {
     return { valido: false, error: 'El archivo supera el límite de 20MB. Contactá soporte técnico.' };
   }
