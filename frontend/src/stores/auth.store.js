@@ -9,6 +9,9 @@ export const useAuthStore = create(
       setAuth: (accessToken, usuario) => set({ accessToken, usuario }),
       clearAuth: () => set({ accessToken: null, usuario: null }),
     }),
-    { name: 'certia-auth', partialize: (s) => ({ usuario: s.usuario }) }
+    {
+      name: 'certia-auth',
+      partialize: (s) => ({ accessToken: s.accessToken, usuario: s.usuario }),
+    }
   )
 );
