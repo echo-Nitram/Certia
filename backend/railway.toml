@@ -1,6 +1,6 @@
-[build]
+﻿[build]
 builder = "RAILPACK"
-buildCommand = "apt-get install -y chromium && npm ci && DATABASE_URL=postgresql://p:p@localhost:5432/p npx prisma generate"
+buildCommand = "npm ci && DATABASE_URL=postgresql://p:p@localhost:5432/p npx prisma generate"
 
 [deploy]
 startCommand = "npx prisma migrate deploy && node prisma/seed.js --check && node src/app.js"

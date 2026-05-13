@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+﻿const puppeteer = require('puppeteer');
 const { PDFDocument } = require('pdf-lib');
 const forge = require('node-forge');
 const { generarQrDataUrl } = require('../utils/qr');
@@ -33,20 +33,16 @@ async function generarPdfBorrador(plantillaHtml, datosFormulario, solicitud, cli
 
   const htmlFinal = reemplazarVariables(plantillaHtml, variables);
 
-  const launchOptions = {
+  const browser = await puppeteer.launch({
     headless: 'new',
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
     ],
-  };
-  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-    launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-  }
-
-  const browser = await puppeteer.launch(launchOptions);
+  });
 
   try {
     const page = await browser.newPage();
@@ -71,7 +67,7 @@ async function agregarMarcaDeAgua(pdfBuffer) {
 
   for (const page of pages) {
     const { width } = page.getSize();
-    page.drawText('Verificado via CERTIA — certia.uy', {
+    page.drawText('Verificado vía CERTIA — certia.uy', {
       x: 20,
       y: 12,
       size: 8,
