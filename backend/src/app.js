@@ -116,4 +116,9 @@ server.listen(PORT, () => {
   initJobs();
 });
 
+process.on('SIGTERM', () => {
+  console.log('SIGTERM recibido, cerrando servidor...');
+  server.close(() => process.exit(0));
+});
+
 module.exports = app;
