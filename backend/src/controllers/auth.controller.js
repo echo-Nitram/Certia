@@ -1,8 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { generarOtp, hashOtp, verificarOtp } = require('../utils/otp');
-const emailService = require('../services/email.service');
 
 const prisma = new PrismaClient();
 
@@ -32,61 +30,6 @@ async function loginAdmin(req, res, next) {
 
     const passwordOk = await bcrypt.compare(password, admin.passwordHash);
     if (!passwordOk) return res.status(401).json({ error: 'Credenciales inválidas.' });
-
-    const codigo = generarOtp();
-    const codigoHash = await hashOtp(codigo);
-    const expiraEn = new Date(Date.now() + parseInt(process.env.OTP_EXPIRY_MINUTES || '10') * 60 * 1000);
-
-    await prisma.otpCode.deleteMany({ where: { adminId: admin.id } });
-    await prisma.otpCode.create({
-      data: { adminId: admin.id, codigoHash, expiraEn, usado: false, intentosFallidos: 0 },
-    });
-
-    await emailService.enviarOtp(admin.email, admin.nombre, codigo);
-
-    await prisma.auditoria.create({
-      data: { adminId: admin.id, entidad: 'Admin', accion: 'login_intento', ipOrigen: req.ip },
-    });
-
-    return res.json({ otpRequerido: true, adminId: admin.id });
-  } catch (err) {
-    next(err);
-  }
-}
-
-// POST /api/auth/admin/verify-otp
-async function verifyOtp(req, res, next) {
-  try {
-    const { adminId, codigo } = req.body;
-    if (!adminId || !codigo) return res.status(400).json({ error: 'adminId y código requeridos.' });
-
-    const admin = await prisma.admin.findUnique({ where: { id: adminId } });
-    if (!admin || !admin.activo) return res.status(401).json({ error: 'Admin no encontrado.' });
-
-    const otpRecord = await prisma.otpCode.findFirst({
-      where: { adminId, usado: false, expiraEn: { gt: new Date() } },
-      orderBy: { creadoEn: 'desc' },
-    });
-
-    if (!otpRecord) return res.status(401).json({ error: 'Código expirado o inexistente. Solicitá uno nuevo.' });
-
-    const maxIntentos = parseInt(process.env.OTP_MAX_INTENTOS || '3');
-    if (otpRecord.intentosFallidos >= maxIntentos) {
-      await prisma.otpCode.update({ where: { id: otpRecord.id }, data: { usado: true } });
-      return res.status(401).json({ error: 'Código invalidado por exceso de intentos fallidos.' });
-    }
-
-    const valido = await verificarOtp(codigo, otpRecord.codigoHash);
-    if (!valido) {
-      await prisma.otpCode.update({
-        where: { id: otpRecord.id },
-        data: { intentosFallidos: { increment: 1 } },
-      });
-      const restantes = maxIntentos - (otpRecord.intentosFallidos + 1);
-      return res.status(401).json({ error: `Código incorrecto. Intentos restantes: ${restantes}.` });
-    }
-
-    await prisma.otpCode.update({ where: { id: otpRecord.id }, data: { usado: true } });
 
     const payload = { id: admin.id, email: admin.email, nombre: admin.nombre, rol: 'admin' };
     const { accessToken, refreshToken } = generarTokens(payload);
@@ -146,4 +89,4 @@ async function logout(req, res) {
   return res.json({ ok: true });
 }
 
-module.exports = { loginAdmin, verifyOtp, loginCliente, refresh, logout };
+module.exports = { loginAdmin, loginCliente, refresh, logout };
