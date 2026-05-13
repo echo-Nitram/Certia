@@ -1,4 +1,4 @@
-﻿const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
 const { PDFDocument } = require('pdf-lib');
 const forge = require('node-forge');
 const { generarQrDataUrl } = require('../utils/qr');
