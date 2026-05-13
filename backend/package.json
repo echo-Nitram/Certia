@@ -1,7 +1,7 @@
-{
+﻿{
   "name": "certia-backend",
   "version": "3.0.0",
-  "description": "CERTIA v3 — Sistema de Gestión de Certificados Halal — Backend",
+  "description": "CERTIA v3 â€” Sistema de GestiÃ³n de Certificados Halal â€” Backend",
   "main": "src/app.js",
   "scripts": {
     "dev": "nodemon src/app.js",
@@ -31,7 +31,7 @@
     "nodemailer": "^6.9.16",
     "pdf-lib": "^1.17.1",
     "pdf2pic": "^3.2.0",
-    "puppeteer": "^23.7.0",
+    "puppeteer-core": "^23.7.0",
     "qrcode": "^1.5.4",
     "socket.io": "^4.8.1",
     "uuid": "^10.0.0"
@@ -44,3 +44,4 @@
     "seed": "node prisma/seed.js"
   }
 }
+
