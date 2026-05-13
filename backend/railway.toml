@@ -1,9 +1,10 @@
-﻿[build]
+[build]
 builder = "RAILPACK"
 buildCommand = "npm ci && DATABASE_URL=postgresql://p:p@localhost:5432/p npx prisma generate"
 
 [deploy]
-startCommand = "npx prisma migrate deploy && node prisma/seed.js --check && node src/app.js"
+preDeployCommand = "npx prisma migrate deploy && node prisma/seed.js --check"
+startCommand = "node src/app.js"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
