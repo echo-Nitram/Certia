@@ -51,6 +51,11 @@ export default function SolicitudDetalleCliente() {
     .slice(-1)[0];
   const motivoObservacion = historialObservado?.motivoCliente;
 
+  const historialRechazo = (solicitud.historialEstados || [])
+    .filter(h => h.estadoNuevo === 'RECHAZADO')
+    .slice(-1)[0];
+  const motivoRechazo = historialRechazo?.motivoCliente;
+
   return (
     <div className="space-y-5 max-w-3xl">
       {/* Encabezado */}
@@ -62,6 +67,18 @@ export default function SolicitudDetalleCliente() {
         </div>
         <EstadoBadge estado={solicitud.estadoActual} className="text-sm px-3 py-1" />
       </div>
+
+      {/* Solicitud rechazada (RECHAZADO) */}
+      {solicitud.estadoActual === 'RECHAZADO' && (
+        <div className="bg-red-50 border-l-4 border-red-500 rounded-xl p-5">
+          <p className="font-semibold text-red-800">✕ Solicitud rechazada</p>
+          {motivoRechazo ? (
+            <p className="text-sm text-red-700 mt-1">{motivoRechazo}</p>
+          ) : (
+            <p className="text-sm text-red-600 mt-1">Contactá al Centro Islámico para más información.</p>
+          )}
+        </div>
+      )}
 
       {/* Corrección requerida (OBSERVADO) */}
       {solicitud.estadoActual === 'OBSERVADO' && (
@@ -218,7 +235,14 @@ export default function SolicitudDetalleCliente() {
       )}
 
       {/* Renovar certificado */}
-      {['FINALIZADO', 'VENCIDO'].includes(solicitud.estadoActual) && (
+      {['FINALIZADO', 'VENCIDO'].includes(solicitud.estadoActual) && (() => {
+        const puedeRenovar = solicitud.estadoActual === 'VENCIDO' || (() => {
+          if (!solicitud.fechaVencimiento) return true;
+          const diasRestantes = Math.ceil((new Date(solicitud.fechaVencimiento) - new Date()) / (1000 * 60 * 60 * 24));
+          return diasRestantes <= 60;
+        })();
+        if (!puedeRenovar) return null;
+        return (
         <div className="bg-certia-green/5 border border-certia-green/20 rounded-xl p-4 text-center">
           <p className="text-sm text-gray-600 mb-3">
             {solicitud.estadoActual === 'VENCIDO' ? '¿Necesitás renovar este certificado?' : '¿Querés renovar anticipadamente?'}
@@ -230,7 +254,8 @@ export default function SolicitudDetalleCliente() {
             Solicitar renovación
           </Link>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
