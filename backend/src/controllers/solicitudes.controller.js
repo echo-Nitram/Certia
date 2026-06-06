@@ -119,7 +119,15 @@ async function listar(req, res) {
     }),
   ]);
 
-  return res.json({ total, page: parseInt(page), limit: parseInt(limit), data: solicitudes });
+  // Corrección retroactiva para datos guardados como string
+  const dataArreglada = solicitudes.map(s => {
+    if (typeof s.datosFormulario === 'string') {
+      try { s.datosFormulario = JSON.parse(s.datosFormulario); } catch (e) {}
+    }
+    return s;
+  });
+
+  return res.json({ total, page: parseInt(page), limit: parseInt(limit), data: dataArreglada });
 }
 
 // ── GET /api/solicitudes/:id ──────────────────────────────────────────────────
@@ -153,123 +161,162 @@ async function obtener(req, res) {
     }));
   }
 
+  // Corrección retroactiva para datos guardados como string
+  if (typeof solicitud.datosFormulario === 'string') {
+    try { solicitud.datosFormulario = JSON.parse(solicitud.datosFormulario); } catch(e) {}
+  }
+
   return res.json(solicitud);
 }
 
 // ── POST /api/solicitudes ─────────────────────────────────────────────────────
-async function crear(req, res) {
-  const { tipoCertId, datosFormulario, solicitudOrigenId } = req.body;
+async function crear(req, res, next) {
+  try {
+    let { tipoCertId, datosFormulario, solicitudOrigenId } = req.body;
 
-  if (!tipoCertId || !datosFormulario) {
-    return res.status(400).json({ error: 'tipoCertId y datosFormulario requeridos.' });
-  }
-
-  const clienteId = req.user.rol === 'cliente' ? req.user.id : req.body.clienteId;
-  if (!clienteId) return res.status(400).json({ error: 'clienteId requerido.' });
-
-  // Validar solicitudOrigenId si se trata de una renovación
-  if (solicitudOrigenId) {
-    const origen = await prisma.solicitud.findUnique({ where: { id: solicitudOrigenId } });
-    if (!origen) {
-      return res.status(404).json({ error: 'Solicitud origen no encontrada.' });
+    if (typeof datosFormulario === 'string') {
+      try {
+        datosFormulario = JSON.parse(datosFormulario);
+      } catch (e) {
+        return res.status(400).json({ error: 'Formato de datosFormulario inválido.' });
+      }
     }
-    if (origen.clienteId !== clienteId) {
-      return res.status(403).json({ error: 'No tenés permiso para renovar esa solicitud.' });
+
+    if (!tipoCertId || !datosFormulario) {
+      return res.status(400).json({ error: 'tipoCertId y datosFormulario requeridos.' });
     }
-    if (!['FINALIZADO', 'VENCIDO'].includes(origen.estadoActual)) {
-      return res.status(400).json({ error: 'Solo se pueden renovar solicitudes finalizadas o vencidas.' });
+
+    const clienteId = req.user.rol === 'cliente' ? req.user.id : req.body.clienteId;
+    if (!clienteId) return res.status(400).json({ error: 'clienteId requerido.' });
+
+    // Validar solicitudOrigenId si se trata de una renovación
+    if (solicitudOrigenId) {
+      const origen = await prisma.solicitud.findUnique({ where: { id: solicitudOrigenId } });
+      if (!origen) {
+        return res.status(404).json({ error: 'Solicitud origen no encontrada.' });
+      }
+      if (origen.clienteId !== clienteId) {
+        return res.status(403).json({ error: 'No tenés permiso para renovar esa solicitud.' });
+      }
+      if (!['FINALIZADO', 'VENCIDO'].includes(origen.estadoActual)) {
+        return res.status(400).json({ error: 'Solo se pueden renovar solicitudes finalizadas o vencidas.' });
+      }
     }
-  }
 
-  // Verificar que el tipo esté habilitado para este cliente
-  const habilitado = await prisma.clienteTipoCert.findUnique({
-    where: { clienteId_tipoCertId: { clienteId, tipoCertId } },
-  });
-  if (!habilitado) return res.status(403).json({ error: 'Tipo de certificado no habilitado para este cliente.' });
-
-  const tipoCert = await prisma.tipoCertificado.findUnique({ where: { id: tipoCertId } });
-  if (!tipoCert || !tipoCert.activo) return res.status(404).json({ error: 'Tipo de certificado no disponible.' });
-
-  const nExpediente = await generarNExpediente();
-
-  const solicitud = await prisma.solicitud.create({
-    data: {
-      nExpediente,
-      clienteId,
-      tipoCertId,
-      datosFormulario,
-      estadoActual: 'PENDIENTE',
-      solicitudOrigenId: solicitudOrigenId || null,
-    },
-    include: { cliente: true, tipoCert: true },
-  });
-
-  await prisma.historialEstado.create({
-    data: {
-      solicitudId: solicitud.id,
-      estadoAnterior: null,
-      estadoNuevo: 'PENDIENTE',
-      motivoCliente: 'Solicitud enviada por el cliente',
-    },
-  });
-
-  // Subir comprobante si viene en el request (archivo en memoria)
-  if (req.file) {
-    const url = await cloudinaryService.subirBuffer(req.file.buffer, {
-      carpeta: 'certia/comprobantes',
-      mimeType: req.file.mimetype,
-      nombreOriginal: req.file.originalname,
+    // Verificar que el tipo esté habilitado para este cliente
+    const habilitado = await prisma.clienteTipoCert.findUnique({
+      where: { clienteId_tipoCertId: { clienteId, tipoCertId } },
     });
-    await prisma.adjunto.create({
-      data: {
-        solicitudId: solicitud.id,
-        tipo: 'comprobante_pago',
-        archivoUrl: url,
-        nombreOriginal: req.file.originalname,
+    if (!habilitado) return res.status(403).json({ error: 'Tipo de certificado no habilitado para este cliente.' });
+
+    const tipoCert = await prisma.tipoCertificado.findUnique({ where: { id: tipoCertId } });
+    if (!tipoCert || !tipoCert.activo) return res.status(404).json({ error: 'Tipo de certificado no disponible.' });
+
+    // Subir comprobante PRIMERO para no dejar registros huérfanos si falla Cloudinary
+    let comprobanteUrl = null;
+    if (req.file) {
+      comprobanteUrl = await cloudinaryService.subirBuffer(req.file.buffer, {
+        carpeta: 'certia/comprobantes',
         mimeType: req.file.mimetype,
-      },
-    });
-  }
-
-  // Notificaciones
-  await emailService.enviarConfirmacionSolicitud(
-    solicitud.cliente.email,
-    solicitud.cliente.nombreEmpresa,
-    nExpediente,
-    tipoCert.nombre
-  );
-  const admins = await prisma.admin.findMany({ where: { activo: true } });
-  for (const admin of admins) {
-    await emailService.enviarAlertaNuevaSolicitud(admin.email, nExpediente, solicitud.cliente.nombreEmpresa, tipoCert.nombre);
-  }
-  emitirAlAdmin('solicitud:nueva', {
-    solicitudId: solicitud.id,
-    nExpediente,
-    cliente: solicitud.cliente.nombreEmpresa,
-    tipoCert: tipoCert.nombre,
-  });
-
-  // Webhook solicitud creada
-  await webhookService.disparar('solicitud.creada', {
-    expediente: nExpediente,
-    cliente: { nombre: solicitud.cliente.nombreEmpresa, email: solicitud.cliente.email },
-    tipo_certificado: { codigo: tipoCert.codigo, nombre: tipoCert.nombre },
-  });
-
-  // Webhook renovación si aplica
-  if (solicitudOrigenId) {
-    const origen = await prisma.solicitud.findUnique({ where: { id: solicitudOrigenId }, select: { nExpediente: true } });
-    if (origen) {
-      await webhookService.disparar('renovacion.iniciada', {
-        expediente_nuevo: nExpediente,
-        expediente_origen: origen.nExpediente,
-        cliente: { nombre: solicitud.cliente.nombreEmpresa, email: solicitud.cliente.email },
-        tipo_certificado: { codigo: tipoCert.codigo, nombre: tipoCert.nombre },
+        nombreOriginal: req.file.originalname,
       });
     }
-  }
 
-  return res.status(201).json(solicitud);
+    let nExpediente = await generarNExpediente();
+    let solicitud;
+    let intentos = 0;
+
+    while (intentos < 5) {
+      try {
+        solicitud = await prisma.solicitud.create({
+          data: {
+            nExpediente,
+            clienteId,
+            tipoCertId,
+            datosFormulario,
+            estadoActual: 'PENDIENTE',
+            solicitudOrigenId: solicitudOrigenId || null,
+            historialEstados: {
+              create: {
+                estadoAnterior: null,
+                estadoNuevo: 'PENDIENTE',
+                motivoCliente: 'Solicitud enviada por el cliente',
+              }
+            },
+            ...(comprobanteUrl ? {
+              adjuntos: {
+                create: {
+                  tipo: 'comprobante_pago',
+                  archivoUrl: comprobanteUrl,
+                  nombreOriginal: req.file.originalname,
+                  mimeType: req.file.mimetype,
+                }
+              }
+            } : {})
+          },
+          include: { cliente: true, tipoCert: true },
+        });
+        break; // Éxito
+      } catch (error) {
+        if (error.code === 'P2002' && error.meta?.target?.includes('nExpediente')) {
+          intentos++;
+          nExpediente = await generarNExpediente();
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    if (!solicitud) {
+      return res.status(500).json({ error: 'No se pudo generar un número de expediente único tras varios intentos.' });
+    }
+
+    // Notificaciones
+    await emailService.enviarConfirmacionSolicitud(
+      solicitud.cliente.email,
+      solicitud.cliente.nombreEmpresa,
+      nExpediente,
+      tipoCert.nombre
+    ).catch(e => console.error('[Notif] Error enviando email cliente:', e));
+
+    const admins = await prisma.admin.findMany({ where: { activo: true } });
+    for (const admin of admins) {
+      await emailService.enviarAlertaNuevaSolicitud(admin.email, nExpediente, solicitud.cliente.nombreEmpresa, tipoCert.nombre).catch(e => {});
+    }
+
+    emitirAlAdmin('solicitud:nueva', {
+      solicitudId: solicitud.id,
+      nExpediente,
+      cliente: solicitud.cliente.nombreEmpresa,
+      tipoCert: tipoCert.nombre,
+    });
+
+    // Webhook solicitud creada
+    await webhookService.disparar('solicitud.creada', {
+      expediente: nExpediente,
+      cliente: { nombre: solicitud.cliente.nombreEmpresa, email: solicitud.cliente.email },
+      tipo_certificado: { codigo: tipoCert.codigo, nombre: tipoCert.nombre },
+    }).catch(e => console.error('[Webhook] Error:', e));
+
+    // Webhook renovación si aplica
+    if (solicitudOrigenId) {
+      const origen = await prisma.solicitud.findUnique({ where: { id: solicitudOrigenId }, select: { nExpediente: true } });
+      if (origen) {
+        await webhookService.disparar('renovacion.iniciada', {
+          expediente_nuevo: nExpediente,
+          expediente_origen: origen.nExpediente,
+          cliente: { nombre: solicitud.cliente.nombreEmpresa, email: solicitud.cliente.email },
+          tipo_certificado: { codigo: tipoCert.codigo, nombre: tipoCert.nombre },
+        }).catch(e => {});
+      }
+    }
+
+    return res.status(201).json(solicitud);
+  } catch (err) {
+    if (next) return next(err);
+    console.error('[Solicitudes.crear]', err);
+    return res.status(500).json({ error: 'Error interno al crear la solicitud.' });
+  }
 }
 
 // ── PATCH /api/solicitudes/:id/estado ─────────────────────────────────────────
@@ -331,7 +378,7 @@ async function cambiarEstado(req, res) {
 
   // Trigger automático: EN_ELABORACION → generar PDF borrador → REVISION_PDF
   if (estadoNuevo === 'EN_ELABORACION') {
-    setImmediate(() => generarYSubirBorrador(solicitud));
+    await generarYSubirBorrador(solicitudActualizada);
   }
 
   // Webhook en cambio de estado

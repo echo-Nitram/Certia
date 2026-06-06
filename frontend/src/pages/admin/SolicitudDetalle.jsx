@@ -336,22 +336,36 @@ export default function SolicitudDetalle() {
           {/* Adjuntos */}
           {solicitud.adjuntos?.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="font-semibold text-gray-800 mb-3">Adjuntos</h2>
-              <div className="space-y-2">
+              <h2 className="font-semibold text-gray-800 mb-3">Documentos adjuntos</h2>
+              <div className="space-y-3">
                 {solicitud.adjuntos.map(a => {
-                  const esComprobante = a.tipo === 'comprobante_pago';
+                  const isImage = a.mimeType?.startsWith('image/') || a.archivoUrl.match(/\.(jpg|jpeg|png|gif)$/i);
+                  const isComprobante = a.tipo === 'comprobante_pago';
+
                   return (
-                    <a key={a.id} href={a.archivoUrl} target="_blank" rel="noopener noreferrer"
-                      className={`flex items-center gap-2 text-sm rounded-lg px-3 py-2 border transition hover:shadow-sm ${
-                        esComprobante
-                          ? 'bg-green-50 border-green-200 text-green-800 font-medium'
-                          : 'bg-gray-50 border-gray-200 text-gray-700'
-                      }`}>
-                      <span>{esComprobante ? '💳' : '📎'}</span>
-                      <span className="flex-1">{esComprobante ? 'Comprobante de pago' : a.tipo}</span>
-                      {a.nombreOriginal && <span className="text-xs text-gray-400 truncate max-w-[120px]">{a.nombreOriginal}</span>}
-                      <span className="text-xs opacity-60">↗</span>
-                    </a>
+                    <div key={a.id} className={`p-4 border rounded-lg flex items-center justify-between ${isComprobante ? 'border-green-200 bg-green-50' : 'border-gray-200'}`}>
+                      <div className="flex items-center gap-3">
+                        <div className="text-2xl">{isComprobante ? '💳' : isImage ? '🖼️' : '📄'}</div>
+                        <div>
+                          <p className="font-medium text-sm text-gray-800">
+                            {isComprobante ? 'Comprobante de pago' : a.tipo}
+                          </p>
+                          <p className="text-xs text-gray-500">{a.nombreOriginal || 'Archivo adjunto'}</p>
+                        </div>
+                      </div>
+                      <a
+                        href={a.archivoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`text-sm font-medium px-4 py-2 rounded-lg transition ${
+                          isComprobante
+                            ? 'bg-green-600 text-white hover:bg-green-700'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        Ver archivo
+                      </a>
+                    </div>
                   );
                 })}
               </div>
