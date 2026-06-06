@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useNotifications } from '../hooks/useNotifications';
 import NotificationCenter from './NotificationCenter';
@@ -10,7 +10,7 @@ const NAV = [
   { to: '/cliente/nueva', label: 'Nueva Solicitud', icon: '➕' },
 ];
 
-export default function ClienteLayout({ children }) {
+export default function ClienteLayout() {
   const { usuario, logout } = useAuth();
   useNotifications();
   const navigate = useNavigate();
@@ -75,7 +75,7 @@ export default function ClienteLayout({ children }) {
         </div>
       </header>
       <main className="max-w-5xl mx-auto px-4 py-6">
-        {children}
+        <Outlet />
       </main>
     </div>
   );

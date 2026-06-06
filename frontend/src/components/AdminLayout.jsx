@@ -1,4 +1,4 @@
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useNotifications } from '../hooks/useNotifications';
 import NotificationCenter from './NotificationCenter';
@@ -14,7 +14,7 @@ const NAV = [
   { to: '/admin/configuracion', label: 'Configuración', icon: '⚙️' },
 ];
 
-export default function AdminLayout({ children }) {
+export default function AdminLayout() {
   const { usuario, logout } = useAuth();
   useNotifications();
   const navigate = useNavigate();
@@ -69,7 +69,7 @@ export default function AdminLayout({ children }) {
           <NotificationCenter />
         </header>
         <main className="flex-1 overflow-y-auto p-6">
-          {children}
+          <Outlet />
         </main>
       </div>
     </div>
