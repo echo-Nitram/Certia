@@ -310,13 +310,39 @@ export default function SolicitudDetalle() {
           {/* Adjuntos */}
           {solicitud.adjuntos?.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="font-semibold text-gray-800 mb-3">Adjuntos</h2>
-              {solicitud.adjuntos.map(a => (
-                <a key={a.id} href={a.archivoUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-certia-green hover:underline mb-2">
-                  <span>📎</span> {a.tipo}
-                </a>
-              ))}
+              <h2 className="font-semibold text-gray-800 mb-3">Documentos adjuntos</h2>
+              <div className="space-y-3">
+                {solicitud.adjuntos.map(a => {
+                  const isImage = a.mimeType?.startsWith('image/') || a.archivoUrl.match(/\.(jpg|jpeg|png|gif)$/i);
+                  const isComprobante = a.tipo === 'comprobante_pago';
+                  
+                  return (
+                    <div key={a.id} className={`p-4 border rounded-lg flex items-center justify-between ${isComprobante ? 'border-blue-200 bg-blue-50/50' : 'border-gray-200'}`}>
+                      <div className="flex items-center gap-3">
+                        <div className="text-2xl">{isImage ? '🖼️' : '📄'}</div>
+                        <div>
+                          <p className="font-medium text-sm text-gray-800">
+                            {isComprobante ? 'Comprobante de Pago' : a.tipo}
+                          </p>
+                          <p className="text-xs text-gray-500">{a.nombreOriginal || 'Archivo adjunto'}</p>
+                        </div>
+                      </div>
+                      <a 
+                        href={a.archivoUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className={`text-sm font-medium px-4 py-2 rounded-lg transition ${
+                          isComprobante 
+                            ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        Ver archivo
+                      </a>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
