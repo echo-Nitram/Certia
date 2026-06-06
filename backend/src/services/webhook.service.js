@@ -73,6 +73,8 @@ async function dispararConReintentos(wh, payload, evento, intentoActual = 1) {
 
   if (!exito && intentoActual < 4) {
     dispararConReintentos(wh, payload, evento, intentoActual + 1);
+  } else if (!exito) {
+    console.error(`[Webhook] Entrega fallida definitivamente — id=${wh.id} evento=${evento} error=${error}`);
   }
 }
 

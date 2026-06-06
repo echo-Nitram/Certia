@@ -434,6 +434,28 @@ async function generarYSubirBorrador(solicitud) {
     emitirAlAdmin('pdf:borrador_listo', { solicitudId: solicitud.id, nExpediente: solCompleta.nExpediente });
   } catch (err) {
     console.error('[PDF] Error generando borrador:', err);
+    // Registrar el error en el historial para que sea visible en el panel
+    try {
+      await prisma.historialEstado.create({
+        data: {
+          solicitudId: solicitud.id,
+          estadoAnterior: 'EN_ELABORACION',
+          estadoNuevo: 'EN_ELABORACION',
+          motivoInterno: `Error al generar PDF: ${err.message}`,
+        },
+      });
+      // Notificar a los admins del fallo
+      const admins = await prisma.admin.findMany({ where: { activo: true } });
+      for (const admin of admins) {
+        await emailService.enviar({
+          to: admin.email,
+          subject: `[CERTIA] Error generando PDF — ${solicitud.nExpediente}`,
+          html: `<p>No se pudo generar el borrador PDF para la solicitud <strong>${solicitud.nExpediente}</strong>.</p><p>Error: ${err.message}</p><p>La solicitud quedó en estado EN_ELABORACION. Ingresá al panel para revisarla manualmente.</p>`,
+        });
+      }
+    } catch (e2) {
+      console.error('[PDF] Error al registrar fallo de generación:', e2);
+    }
   }
 }
 
