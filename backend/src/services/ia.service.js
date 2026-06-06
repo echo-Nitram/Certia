@@ -4,6 +4,9 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { v4: uuidv4 } = require('uuid');
+const { PrismaClient } = require('@prisma/client');
+
+const prisma = new PrismaClient();
 
 const MODEL = 'claude-sonnet-4-20250514';
 
@@ -59,9 +62,16 @@ async function convertirPdfAImagenes(pdfPath) {
   return { archivos, tmpDir };
 }
 
+async function obtenerApiKey() {
+  if (process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_API_KEY;
+  const config = await prisma.configuracion.findUnique({ where: { clave: 'anthropic_api_key' } });
+  return config?.valor || null;
+}
+
 async function analizarPdfConIA(pdfBuffer) {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error('ANTHROPIC_API_KEY no configurada. Configurala en el panel de administración.');
+  const apiKey = await obtenerApiKey();
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY no configurada. Configurala en Configuración → Integraciones.');
   }
 
   // Guardar PDF temporal
@@ -88,7 +98,7 @@ async function analizarPdfConIA(pdfBuffer) {
       };
     });
 
-    const client = new Anthropic();
+    const client = new Anthropic({ apiKey });
     const message = await client.messages.create({
       model: MODEL,
       max_tokens: 4096,
