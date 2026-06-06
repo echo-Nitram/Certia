@@ -13,7 +13,7 @@ const TRANSICIONES = {
   PAGO_VALIDADO: ['EN_ELABORACION', 'RECHAZADO'],
   EN_ELABORACION: [],
   REVISION_PDF: ['PENDIENTE_FIRMA', 'EN_ELABORACION'],
-  PENDIENTE_FIRMA: ['RECHAZADO'],
+  PENDIENTE_FIRMA: ['FINALIZADO', 'RECHAZADO'],
   FINALIZADO: [],
   RECHAZADO: [],
   VENCIDO: [],
@@ -117,6 +117,30 @@ export default function SolicitudDetalle() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Columna principal */}
         <div className="lg:col-span-2 space-y-5">
+          {/* Fechas de emisión/vencimiento — solo cuando existen */}
+          {(solicitud.fechaEmision || solicitud.fechaVencimiento) && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                <p className="text-xs font-medium text-green-700 uppercase tracking-wide mb-1">Fecha de emisión</p>
+                <p className="text-base font-semibold text-green-900">{formatFecha(solicitud.fechaEmision)}</p>
+              </div>
+              <div className={`rounded-xl p-4 border ${
+                solicitud.fechaVencimiento && new Date(solicitud.fechaVencimiento) < new Date()
+                  ? 'bg-red-50 border-red-200'
+                  : 'bg-amber-50 border-amber-200'
+              }`}>
+                <p className={`text-xs font-medium uppercase tracking-wide mb-1 ${
+                  solicitud.fechaVencimiento && new Date(solicitud.fechaVencimiento) < new Date()
+                    ? 'text-red-700' : 'text-amber-700'
+                }`}>Fecha de vencimiento</p>
+                <p className={`text-base font-semibold ${
+                  solicitud.fechaVencimiento && new Date(solicitud.fechaVencimiento) < new Date()
+                    ? 'text-red-900' : 'text-amber-900'
+                }`}>{formatFecha(solicitud.fechaVencimiento)}</p>
+              </div>
+            </div>
+          )}
+
           {/* Datos del formulario */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h2 className="font-semibold text-gray-800 mb-4">Datos de la solicitud</h2>
@@ -127,20 +151,22 @@ export default function SolicitudDetalle() {
                   <dd className="text-sm text-gray-800 mt-0.5">{String(v)}</dd>
                 </div>
               ))}
-              <div>
-                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Emisión</dt>
-                <dd className="text-sm text-gray-800 mt-0.5">{formatFecha(solicitud.fechaEmision)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Vencimiento</dt>
-                <dd className="text-sm text-gray-800 mt-0.5">{formatFecha(solicitud.fechaVencimiento)}</dd>
-              </div>
             </dl>
 
             {solicitud.solicitudOrigen && (
               <p className="mt-4 text-xs text-blue-600 bg-blue-50 rounded px-3 py-2">
                 Renovación de: <a href={`/admin/solicitudes/${solicitud.solicitudOrigen.id}`} className="font-medium underline">{solicitud.solicitudOrigen.nExpediente}</a>
               </p>
+            )}
+            {solicitud.renovaciones?.length > 0 && (
+              <div className="mt-4 text-xs bg-purple-50 border border-purple-200 rounded px-3 py-2 space-y-1">
+                <p className="font-medium text-purple-700">Renovaciones de este certificado:</p>
+                {solicitud.renovaciones.map(r => (
+                  <a key={r.id} href={`/admin/solicitudes/${r.id}`}
+                    className="block text-purple-600 hover:underline">{r.nExpediente}
+                  </a>
+                ))}
+              </div>
             )}
           </div>
 
@@ -311,12 +337,24 @@ export default function SolicitudDetalle() {
           {solicitud.adjuntos?.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="font-semibold text-gray-800 mb-3">Adjuntos</h2>
-              {solicitud.adjuntos.map(a => (
-                <a key={a.id} href={a.archivoUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-certia-green hover:underline mb-2">
-                  <span>📎</span> {a.tipo}
-                </a>
-              ))}
+              <div className="space-y-2">
+                {solicitud.adjuntos.map(a => {
+                  const esComprobante = a.tipo === 'comprobante_pago';
+                  return (
+                    <a key={a.id} href={a.archivoUrl} target="_blank" rel="noopener noreferrer"
+                      className={`flex items-center gap-2 text-sm rounded-lg px-3 py-2 border transition hover:shadow-sm ${
+                        esComprobante
+                          ? 'bg-green-50 border-green-200 text-green-800 font-medium'
+                          : 'bg-gray-50 border-gray-200 text-gray-700'
+                      }`}>
+                      <span>{esComprobante ? '💳' : '📎'}</span>
+                      <span className="flex-1">{esComprobante ? 'Comprobante de pago' : a.tipo}</span>
+                      {a.nombreOriginal && <span className="text-xs text-gray-400 truncate max-w-[120px]">{a.nombreOriginal}</span>}
+                      <span className="text-xs opacity-60">↗</span>
+                    </a>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
