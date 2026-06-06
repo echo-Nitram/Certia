@@ -125,7 +125,9 @@ async function validarFirmaDigital(pdfBuffer, pdfOriginalBuffer) {
   }
 
   const contenido = pdfBuffer.toString('binary');
-  const tieneFirma = contenido.includes('/ByteRange') || contenido.includes('/Sig') || contenido.includes('/AcroForm');
+  // /ByteRange + /Contents es la firma real según ISO 32000 (ambos campos requeridos)
+  const tieneFirma = (contenido.includes('/ByteRange') && contenido.includes('/Contents'))
+    || contenido.includes('/AcroForm');
   if (!tieneFirma) {
     return { valido: false, error: 'El PDF no contiene una firma digital detectada. Repetí el proceso en firma.gub.uy.' };
   }
