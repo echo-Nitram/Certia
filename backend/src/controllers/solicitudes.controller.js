@@ -119,7 +119,15 @@ async function listar(req, res) {
     }),
   ]);
 
-  return res.json({ total, page: parseInt(page), limit: parseInt(limit), data: solicitudes });
+  // Corrección retroactiva para datos guardados como string
+  const dataArreglada = solicitudes.map(s => {
+    if (typeof s.datosFormulario === 'string') {
+      try { s.datosFormulario = JSON.parse(s.datosFormulario); } catch (e) {}
+    }
+    return s;
+  });
+
+  return res.json({ total, page: parseInt(page), limit: parseInt(limit), data: dataArreglada });
 }
 
 // ── GET /api/solicitudes/:id ──────────────────────────────────────────────────
@@ -153,12 +161,25 @@ async function obtener(req, res) {
     }));
   }
 
+  // Corrección retroactiva para datos guardados como string
+  if (typeof solicitud.datosFormulario === 'string') {
+    try { solicitud.datosFormulario = JSON.parse(solicitud.datosFormulario); } catch(e) {}
+  }
+
   return res.json(solicitud);
 }
 
 // ── POST /api/solicitudes ─────────────────────────────────────────────────────
 async function crear(req, res) {
-  const { tipoCertId, datosFormulario, solicitudOrigenId } = req.body;
+  let { tipoCertId, datosFormulario, solicitudOrigenId } = req.body;
+
+  if (typeof datosFormulario === 'string') {
+    try {
+      datosFormulario = JSON.parse(datosFormulario);
+    } catch (e) {
+      return res.status(400).json({ error: 'Formato de datosFormulario inválido.' });
+    }
+  }
 
   if (!tipoCertId || !datosFormulario) {
     return res.status(400).json({ error: 'tipoCertId y datosFormulario requeridos.' });
@@ -190,19 +211,37 @@ async function crear(req, res) {
   const tipoCert = await prisma.tipoCertificado.findUnique({ where: { id: tipoCertId } });
   if (!tipoCert || !tipoCert.activo) return res.status(404).json({ error: 'Tipo de certificado no disponible.' });
 
-  const nExpediente = await generarNExpediente();
+  let nExpediente = await generarNExpediente();
+  let solicitud;
+  let intentos = 0;
 
-  const solicitud = await prisma.solicitud.create({
-    data: {
-      nExpediente,
-      clienteId,
-      tipoCertId,
-      datosFormulario,
-      estadoActual: 'PENDIENTE',
-      solicitudOrigenId: solicitudOrigenId || null,
-    },
-    include: { cliente: true, tipoCert: true },
-  });
+  while (intentos < 5) {
+    try {
+      solicitud = await prisma.solicitud.create({
+        data: {
+          nExpediente,
+          clienteId,
+          tipoCertId,
+          datosFormulario,
+          estadoActual: 'PENDIENTE',
+          solicitudOrigenId: solicitudOrigenId || null,
+        },
+        include: { cliente: true, tipoCert: true },
+      });
+      break; // Éxito
+    } catch (error) {
+      if (error.code === 'P2002' && error.meta?.target?.includes('nExpediente')) {
+        intentos++;
+        nExpediente = await generarNExpediente();
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  if (!solicitud) {
+    return res.status(500).json({ error: 'No se pudo generar un número de expediente único tras varios intentos.' });
+  }
 
   await prisma.historialEstado.create({
     data: {
@@ -331,7 +370,7 @@ async function cambiarEstado(req, res) {
 
   // Trigger automático: EN_ELABORACION → generar PDF borrador → REVISION_PDF
   if (estadoNuevo === 'EN_ELABORACION') {
-    setImmediate(() => generarYSubirBorrador(solicitud));
+    await generarYSubirBorrador(solicitudActualizada);
   }
 
   // Webhook en cambio de estado

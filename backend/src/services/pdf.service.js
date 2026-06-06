@@ -3,11 +3,21 @@ const { PDFDocument } = require('pdf-lib');
 const forge = require('node-forge');
 const { generarQrDataUrl } = require('../utils/qr');
 
+function escapeHtml(unsafe) {
+  if (typeof unsafe !== 'string') return unsafe;
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function reemplazarVariables(html, datos) {
   let resultado = html;
   for (const [clave, valor] of Object.entries(datos)) {
     const regex = new RegExp(`\\{\\{${clave}\\}\\}`, 'g');
-    resultado = resultado.replace(regex, valor ?? '');
+    resultado = resultado.replace(regex, escapeHtml(valor ?? ''));
   }
   return resultado;
 }
