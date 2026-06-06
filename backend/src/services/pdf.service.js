@@ -114,7 +114,7 @@ async function agregarQrAlPdf(pdfBuffer, qrToken) {
 }
 
 async function validarFirmaDigital(pdfBuffer, pdfOriginalBuffer) {
-  if (!pdfBuffer.subarray(0, 4).toString() === '%PDF') {
+  if (pdfBuffer.subarray(0, 4).toString() !== '%PDF') {
     return { valido: false, error: 'El archivo no es un PDF válido.' };
   }
 

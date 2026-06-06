@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
@@ -106,6 +106,9 @@ export default function SolicitudDetalle() {
       {/* Encabezado */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
+          <Link to="/admin/solicitudes" className="text-sm text-certia-green hover:underline inline-flex items-center gap-1 mb-1">
+            ← Solicitudes
+          </Link>
           <h1 className="text-2xl font-bold text-gray-900">{solicitud.nExpediente}</h1>
           <p className="text-gray-500 text-sm mt-1">
             {solicitud.tipoCert?.codigo} — {solicitud.tipoCert?.nombre} · {solicitud.cliente?.nombreEmpresa}
