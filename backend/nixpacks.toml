@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["nodejs_20", "chromium", "nss", "atk", "cups", "libdrm", "mesa", "expat", "glib", "nspr", "gtk3", "gdk-pixbuf", "alsa-lib"]
+
+[phases.build]
+cmds = ["npm ci", "DATABASE_URL=postgresql://p:p@localhost:5432/p npx prisma generate"]
+
+[start]
+cmd = "node src/app.js"

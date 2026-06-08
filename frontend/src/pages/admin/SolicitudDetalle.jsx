@@ -148,12 +148,16 @@ export default function SolicitudDetalle() {
             </div>
             <div className="c-card__body">
               <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {Object.entries(solicitud.datosFormulario || {}).map(([k, v]) => (
-                  <div key={k}>
-                    <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">{k}</dt>
-                    <dd className="text-sm text-gray-800 mt-0.5">{String(v)}</dd>
-                  </div>
-                ))}
+                {Object.entries(solicitud.datosFormulario || {}).map(([k, v]) => {
+                  const campo = (solicitud.tipoCert?.camposFormulario || []).find(c => c.nombre === k);
+                  const label = campo?.label || k.replace(/_/g, ' ');
+                  return (
+                    <div key={k}>
+                      <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</dt>
+                      <dd className="text-sm text-gray-800 mt-0.5">{String(v)}</dd>
+                    </div>
+                  );
+                })}
               </dl>
 
               {solicitud.solicitudOrigen && (

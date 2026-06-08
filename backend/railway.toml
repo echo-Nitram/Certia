@@ -1,6 +1,5 @@
 [build]
-builder = "RAILPACK"
-buildCommand = "npm ci && DATABASE_URL=postgresql://p:p@localhost:5432/p npx prisma generate"
+builder = "NIXPACKS"
 
 [deploy]
 preDeployCommand = "npx prisma migrate deploy && node prisma/seed.js --check && node prisma/seed-hc07.js"

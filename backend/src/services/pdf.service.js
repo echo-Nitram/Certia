@@ -2,6 +2,31 @@ const puppeteer = require('puppeteer-core');
 const { PDFDocument } = require('pdf-lib');
 const forge = require('node-forge');
 const { generarQrDataUrl } = require('../utils/qr');
+const fs = require('fs');
+
+// Detecta automáticamente el ejecutable de Chromium disponible
+function detectarChromium() {
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) return process.env.PUPPETEER_EXECUTABLE_PATH;
+  const candidatos = [
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/nix/store',  // nixpacks instala aquí, se busca dinámicamente
+  ];
+  // Buscar en /nix/store si existe
+  if (fs.existsSync('/nix/store')) {
+    try {
+      const { execSync } = require('child_process');
+      const path = execSync('which chromium 2>/dev/null || which chromium-browser 2>/dev/null || true', { encoding: 'utf8' }).trim();
+      if (path) return path;
+    } catch (_) {}
+  }
+  for (const p of candidatos) {
+    if (fs.existsSync(p)) return p;
+  }
+  return undefined;
+}
 
 function escapeHtml(unsafe) {
   if (typeof unsafe !== 'string') return unsafe;
@@ -43,14 +68,16 @@ async function generarPdfBorrador(plantillaHtml, datosFormulario, solicitud, cli
 
   const htmlFinal = reemplazarVariables(plantillaHtml, variables);
 
+  const executablePath = detectarChromium();
   const browser = await puppeteer.launch({
     headless: 'new',
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+    executablePath,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
+      '--single-process',
     ],
   });
 
