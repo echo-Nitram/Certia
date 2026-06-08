@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useNotifications } from '../hooks/useNotifications';
@@ -105,6 +106,7 @@ export default function AdminLayout() {
   useNotifications();
   const navigate = useNavigate();
   const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   async function handleLogout() {
     await logout();
@@ -118,8 +120,14 @@ export default function AdminLayout() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+      {/* Mobile overlay */}
+      <div
+        className={`c-sidebar-overlay${sidebarOpen ? ' is-open' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+
       {/* Sidebar */}
-      <aside className="c-sidebar">
+      <aside className={`c-sidebar${sidebarOpen ? ' is-open' : ''}`}>
         {/* Islamic pattern background */}
         <div style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
@@ -149,6 +157,7 @@ export default function AdminLayout() {
               key={to}
               to={to}
               end={exact}
+              onClick={() => setSidebarOpen(false)}
               className={({ isActive }) => `c-nav-item${isActive ? ' is-active' : ''}`}
             >
               <NavIcon name={icon} />
@@ -182,7 +191,14 @@ export default function AdminLayout() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Topbar */}
         <header className="c-topbar">
-          <span className="page-title" style={{ fontSize: 17 }}>{pageTitle}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button className="c-topbar__hamburger" onClick={() => setSidebarOpen(o => !o)} aria-label="Menú">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+              </svg>
+            </button>
+            <span className="page-title" style={{ fontSize: 17 }}>{pageTitle}</span>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <NotificationCenter />
           </div>
