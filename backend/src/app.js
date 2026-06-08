@@ -14,6 +14,7 @@ const { initJobs } = require('./jobs');
 const app = express();
 const server = http.createServer(app);
 
+app.set('trust proxy', 1);
 // ── CORS ──────────────────────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
