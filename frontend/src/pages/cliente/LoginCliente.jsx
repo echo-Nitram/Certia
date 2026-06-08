@@ -26,7 +26,7 @@ export default function LoginCliente() {
   return (
     <div className="c-login-layout">
       {/* LEFT PANEL — dark green with Islamic pattern */}
-      <div className="c-login-panel">
+      <div className="c-login-panel c-login-panel--brand">
         {/* Islamic pattern background */}
         <div style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
