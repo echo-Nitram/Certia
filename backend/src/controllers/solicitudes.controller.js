@@ -212,14 +212,18 @@ async function crear(req, res, next) {
     const tipoCert = await prisma.tipoCertificado.findUnique({ where: { id: tipoCertId } });
     if (!tipoCert || !tipoCert.activo) return res.status(404).json({ error: 'Tipo de certificado no disponible.' });
 
-    // Subir comprobante PRIMERO para no dejar registros huérfanos si falla Cloudinary
+    // Subir comprobante (opcional — si Cloudinary no está configurado se omite sin bloquear)
     let comprobanteUrl = null;
     if (req.file) {
-      comprobanteUrl = await cloudinaryService.subirBuffer(req.file.buffer, {
-        carpeta: 'certia/comprobantes',
-        mimeType: req.file.mimetype,
-        nombreOriginal: req.file.originalname,
-      });
+      try {
+        comprobanteUrl = await cloudinaryService.subirBuffer(req.file.buffer, {
+          carpeta: 'certia/comprobantes',
+          mimeType: req.file.mimetype,
+          nombreOriginal: req.file.originalname,
+        });
+      } catch (uploadErr) {
+        console.error('[Solicitudes.crear] No se pudo subir comprobante:', uploadErr.message);
+      }
     }
 
     let nExpediente = await generarNExpediente();
