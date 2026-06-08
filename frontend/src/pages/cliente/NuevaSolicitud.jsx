@@ -72,13 +72,13 @@ export default function NuevaSolicitud() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900">
+      <h1 className="page-title">
         {renovacionDeId ? 'Renovar certificado' : 'Nueva solicitud'}
       </h1>
 
       {/* Banner de renovación */}
       {renovacionDeId && tipoCert && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-700">
+        <div className="c-alert c-alert--info">
           <span className="font-medium">⟳ Renovación en curso.</span> Los datos fueron pre-llenados desde el certificado anterior. Revisalos antes de continuar.
         </div>
       )}
@@ -107,12 +107,14 @@ export default function NuevaSolicitud() {
           ) : (
             tipos.map(t => (
               <button key={t.id} onClick={() => seleccionarTipo(t)}
-                className="w-full text-left bg-white rounded-xl border border-gray-200 p-4 hover:border-certia-green hover:shadow-md transition">
-                <div className="flex items-start gap-3">
-                  <span className="font-bold text-certia-green text-sm bg-certia-green/10 px-2 py-0.5 rounded">{t.codigo}</span>
-                  <div>
-                    <p className="font-medium text-gray-800">{t.nombre}</p>
-                    {t.descripcion && <p className="text-xs text-gray-500 mt-0.5">{t.descripcion}</p>}
+                className="c-card w-full text-left hover:border-certia-green hover:shadow-md transition">
+                <div className="c-card__body">
+                  <div className="flex items-start gap-3">
+                    <span className="font-bold text-certia-green text-sm bg-certia-green/10 px-2 py-0.5 rounded">{t.codigo}</span>
+                    <div>
+                      <p className="font-medium text-gray-800">{t.nombre}</p>
+                      {t.descripcion && <p className="text-xs text-gray-500 mt-0.5">{t.descripcion}</p>}
+                    </div>
                   </div>
                 </div>
               </button>
@@ -123,114 +125,119 @@ export default function NuevaSolicitud() {
 
       {/* Paso 1: Datos del formulario */}
       {paso === 1 && tipoCert && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-          <div className="flex items-center gap-2 mb-2">
+        <div className="c-card">
+          <div className="c-card__head">
             <span className="font-bold text-certia-green text-sm bg-certia-green/10 px-2 py-0.5 rounded">{tipoCert.codigo}</span>
             <span className="font-medium text-gray-800">{tipoCert.nombre}</span>
           </div>
-
-          {/* Comprobante de pago en mismo paso */}
-          <div className="border border-dashed border-gray-300 rounded-lg p-4 space-y-2">
-            <p className="text-sm font-medium text-gray-700">Comprobante de pago <span className="text-gray-400 font-normal">(opcional, PDF/JPG/PNG, máx. 5 MB)</span></p>
-            <input
-              type="file"
-              accept="application/pdf,image/jpeg,image/png"
-              onChange={e => setArchivoComprobante(e.target.files[0])}
-              className="text-sm text-gray-600"
-            />
-            {archivoComprobante && (
-              <p className="text-xs text-certia-green font-medium">📎 {archivoComprobante.name}</p>
-            )}
-          </div>
-
-          {(tipoCert.camposFormulario || []).map(campo => (
-            <div key={campo.nombre}>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {campo.label}
-                {campo.requerido && <span className="text-red-500 ml-1">*</span>}
-              </label>
-              {campo.tipo === 'textarea' ? (
-                <textarea
-                  rows={3}
-                  value={datosFormulario[campo.nombre] || ''}
-                  onChange={e => setDatosFormulario(d => ({ ...d, [campo.nombre]: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-certia-green resize-none"
-                  placeholder={campo.placeholder || ''}
-                />
-              ) : campo.tipo === 'select' ? (
-                <select
-                  value={datosFormulario[campo.nombre] || ''}
-                  onChange={e => setDatosFormulario(d => ({ ...d, [campo.nombre]: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-certia-green"
-                >
-                  <option value="">— Seleccionar —</option>
-                  {(campo.opciones || []).map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-              ) : (
-                <input
-                  type={campo.tipo || 'text'}
-                  value={datosFormulario[campo.nombre] || ''}
-                  onChange={e => setDatosFormulario(d => ({ ...d, [campo.nombre]: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-certia-green"
-                  placeholder={campo.placeholder || ''}
-                />
+          <div className="c-card__body space-y-4">
+            {/* Comprobante de pago en mismo paso */}
+            <div className="border border-dashed border-gray-300 rounded-lg p-4 space-y-2">
+              <p className="text-sm font-medium text-gray-700">Comprobante de pago <span className="text-gray-400 font-normal">(opcional, PDF/JPG/PNG, máx. 5 MB)</span></p>
+              <input
+                type="file"
+                accept="application/pdf,image/jpeg,image/png"
+                onChange={e => setArchivoComprobante(e.target.files[0])}
+                className="text-sm text-gray-600"
+              />
+              {archivoComprobante && (
+                <p className="text-xs text-certia-green font-medium">📎 {archivoComprobante.name}</p>
               )}
             </div>
-          ))}
-          <div className="flex gap-3 justify-end pt-2">
-            {!renovacionDeId && (
-              <button onClick={() => setPaso(0)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">← Volver</button>
-            )}
-            <button
-              onClick={() => { if (validarPaso1()) setPaso(2); else toast.error('Completá los campos obligatorios.'); }}
-              className="px-4 py-2 text-sm bg-certia-green text-white rounded-lg hover:bg-certia-green-dark"
-            >
-              Continuar →
-            </button>
+
+            {(tipoCert.camposFormulario || []).map(campo => (
+              <div key={campo.nombre} className="c-field">
+                <label className="c-label">
+                  {campo.label}
+                  {campo.requerido && <span className="text-red-500 ml-1">*</span>}
+                </label>
+                {campo.tipo === 'textarea' ? (
+                  <textarea
+                    rows={3}
+                    value={datosFormulario[campo.nombre] || ''}
+                    onChange={e => setDatosFormulario(d => ({ ...d, [campo.nombre]: e.target.value }))}
+                    className="c-textarea"
+                    placeholder={campo.placeholder || ''}
+                  />
+                ) : campo.tipo === 'select' ? (
+                  <select
+                    value={datosFormulario[campo.nombre] || ''}
+                    onChange={e => setDatosFormulario(d => ({ ...d, [campo.nombre]: e.target.value }))}
+                    className="c-select"
+                  >
+                    <option value="">— Seleccionar —</option>
+                    {(campo.opciones || []).map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                ) : (
+                  <input
+                    type={campo.tipo || 'text'}
+                    value={datosFormulario[campo.nombre] || ''}
+                    onChange={e => setDatosFormulario(d => ({ ...d, [campo.nombre]: e.target.value }))}
+                    className="c-input"
+                    placeholder={campo.placeholder || ''}
+                  />
+                )}
+              </div>
+            ))}
+            <div className="flex gap-3 justify-end pt-2">
+              {!renovacionDeId && (
+                <button onClick={() => setPaso(0)} className="c-btn c-btn--secondary c-btn--sm">← Volver</button>
+              )}
+              <button
+                onClick={() => { if (validarPaso1()) setPaso(2); else toast.error('Completá los campos obligatorios.'); }}
+                className="c-btn c-btn--primary"
+              >
+                Continuar →
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Paso 2: Confirmación */}
       {paso === 2 && tipoCert && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-          <h2 className="font-semibold text-gray-800">Confirmar solicitud</h2>
-          <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
-            <div className="flex gap-2">
-              <span className="text-gray-500 w-32 shrink-0">Tipo:</span>
-              <span className="font-medium text-gray-800">{tipoCert.codigo} — {tipoCert.nombre}</span>
-            </div>
-            {renovacionDeId && (
+        <div className="c-card">
+          <div className="c-card__head">
+            <span className="c-section-title">Confirmar solicitud</span>
+          </div>
+          <div className="c-card__body space-y-4">
+            <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
               <div className="flex gap-2">
                 <span className="text-gray-500 w-32 shrink-0">Tipo:</span>
-                <span className="text-blue-600 font-medium">Renovación</span>
+                <span className="font-medium text-gray-800">{tipoCert.codigo} — {tipoCert.nombre}</span>
               </div>
-            )}
-            {Object.entries(datosFormulario).filter(([, v]) => v).map(([k, v]) => (
-              <div key={k} className="flex gap-2">
-                <span className="text-gray-500 w-32 shrink-0 capitalize">{k.replace(/_/g, ' ')}:</span>
-                <span className="text-gray-800">{String(v)}</span>
-              </div>
-            ))}
-            {archivoComprobante && (
-              <div className="flex gap-2">
-                <span className="text-gray-500 w-32 shrink-0">Comprobante:</span>
-                <span className="text-certia-green">📎 {archivoComprobante.name}</span>
-              </div>
-            )}
-          </div>
-          <p className="text-xs text-gray-500">
-            Al enviar, un operador del Centro Islámico del Uruguay revisará la solicitud y te notificará por email.
-          </p>
-          <div className="flex gap-3 justify-end">
-            <button onClick={() => setPaso(1)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">← Volver</button>
-            <button
-              onClick={() => mutCrear.mutate()}
-              disabled={mutCrear.isPending}
-              className="px-6 py-2 text-sm bg-certia-green text-white font-medium rounded-lg hover:bg-certia-green-dark disabled:opacity-60"
-            >
-              {mutCrear.isPending ? 'Enviando...' : renovacionDeId ? 'Enviar renovación' : 'Enviar solicitud'}
-            </button>
+              {renovacionDeId && (
+                <div className="flex gap-2">
+                  <span className="text-gray-500 w-32 shrink-0">Modalidad:</span>
+                  <span className="text-blue-600 font-medium">Renovación</span>
+                </div>
+              )}
+              {Object.entries(datosFormulario).filter(([, v]) => v).map(([k, v]) => (
+                <div key={k} className="flex gap-2">
+                  <span className="text-gray-500 w-32 shrink-0 capitalize">{k.replace(/_/g, ' ')}:</span>
+                  <span className="text-gray-800">{String(v)}</span>
+                </div>
+              ))}
+              {archivoComprobante && (
+                <div className="flex gap-2">
+                  <span className="text-gray-500 w-32 shrink-0">Comprobante:</span>
+                  <span className="text-certia-green">📎 {archivoComprobante.name}</span>
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-gray-500">
+              Al enviar, un operador del Centro Islámico del Uruguay revisará la solicitud y te notificará por email.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setPaso(1)} className="c-btn c-btn--secondary c-btn--sm">← Volver</button>
+              <button
+                onClick={() => mutCrear.mutate()}
+                disabled={mutCrear.isPending}
+                className="c-btn c-btn--primary disabled:opacity-60"
+              >
+                {mutCrear.isPending ? 'Enviando...' : renovacionDeId ? 'Enviar renovación' : 'Enviar solicitud'}
+              </button>
+            </div>
           </div>
         </div>
       )}
