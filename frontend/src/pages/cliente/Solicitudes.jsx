@@ -31,30 +31,31 @@ export default function Solicitudes() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl font-bold text-gray-900">Mis solicitudes</h1>
-        <Link to="/cliente/solicitudes/nueva"
-          className="bg-certia-green text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-certia-green-dark transition">
+        <h1 className="page-title">Mis solicitudes</h1>
+        <Link to="/cliente/solicitudes/nueva" className="c-btn c-btn--primary c-btn--sm">
           + Nueva solicitud
         </Link>
       </div>
 
       {/* Filtro estado */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex flex-wrap gap-2">
-          {ESTADOS.map(e => (
-            <button
-              key={e}
-              onClick={() => { setEstado(e); setPage(1); }}
-              className={`px-3 py-1 text-xs font-medium rounded-full border transition ${estado === e ? 'bg-certia-green text-white border-certia-green' : 'bg-white text-gray-600 border-gray-300 hover:border-certia-green'}`}
-            >
-              {e || 'Todos'}
-            </button>
-          ))}
+      <div className="c-card">
+        <div className="c-card__body">
+          <div className="flex flex-wrap gap-2">
+            {ESTADOS.map(e => (
+              <button
+                key={e}
+                onClick={() => { setEstado(e); setPage(1); }}
+                className={`px-3 py-1 text-xs font-medium rounded-full border transition ${estado === e ? 'bg-certia-green text-white border-certia-green' : 'bg-white text-gray-600 border-gray-300 hover:border-certia-green'}`}
+              >
+                {e || 'Todos'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Lista */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="c-card overflow-hidden">
         {isLoading ? (
           <div className="text-center py-12 text-gray-400">Cargando...</div>
         ) : solicitudes.length === 0 ? (
@@ -67,7 +68,7 @@ export default function Solicitudes() {
                   className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-gray-800 text-sm">{s.nExpediente}</p>
+                      <p className="font-medium text-gray-800 text-sm"><span className="c-exp">{s.nExpediente}</span></p>
                       {s.solicitudOrigen && (
                         <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Renovación</span>
                       )}
@@ -88,12 +89,12 @@ export default function Solicitudes() {
                 <p className="text-sm text-gray-500">{total} solicitudes</p>
                 <div className="flex gap-2">
                   <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                    className="px-3 py-1 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50">
+                    className="c-btn c-btn--ghost c-btn--sm disabled:opacity-40">
                     ←
                   </button>
                   <span className="px-3 py-1 text-sm text-gray-600">{page} / {totalPaginas}</span>
                   <button onClick={() => setPage(p => Math.min(totalPaginas, p + 1))} disabled={page === totalPaginas}
-                    className="px-3 py-1 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50">
+                    className="c-btn c-btn--ghost c-btn--sm disabled:opacity-40">
                     →
                   </button>
                 </div>

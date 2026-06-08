@@ -32,86 +32,88 @@ export default function Solicitudes() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl font-bold text-gray-900">Solicitudes</h1>
-        <button onClick={exportar} className="bg-certia-gold text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-certia-gold-dark transition">
+        <h1 className="page-title">Solicitudes</h1>
+        <button onClick={exportar} className="c-btn c-btn--gold c-btn--sm">
           Exportar Excel
         </button>
       </div>
 
       {/* Filtros */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-wrap gap-3">
-        <input
-          type="text"
-          placeholder="Buscar expediente o empresa..."
-          value={busqueda}
-          onChange={e => setBusqueda(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm flex-1 min-w-48 focus:outline-none focus:ring-2 focus:ring-certia-green"
-        />
-        <select
-          value={estado}
-          onChange={e => setParams({ estado: e.target.value, page: '1' })}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-certia-green"
-        >
-          {ESTADOS.map(e => <option key={e} value={e}>{e || 'Todos los estados'}</option>)}
-        </select>
+      <div className="c-card" style={{ padding: '12px 16px' }}>
+        <div className="flex flex-wrap gap-3">
+          <input
+            type="text"
+            placeholder="Buscar expediente o empresa..."
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+            className="c-input flex-1 min-w-48"
+          />
+          <select
+            value={estado}
+            onChange={e => setParams({ estado: e.target.value, page: '1' })}
+            className="c-select"
+          >
+            {ESTADOS.map(e => <option key={e} value={e}>{e || 'Todos los estados'}</option>)}
+          </select>
+        </div>
       </div>
 
       {/* Tabla */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        {isLoading ? (
-          <div className="text-center py-12 text-gray-400">Cargando...</div>
-        ) : (
-          <>
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+      {isLoading ? (
+        <div className="c-card text-center text-gray-400" style={{ padding: 48 }}>Cargando...</div>
+      ) : (
+        <div className="c-card" style={{ padding: 0 }}>
+          <div className="c-table-wrap">
+            <table>
+              <thead>
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Expediente</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 hidden md:table-cell">Cliente</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 hidden lg:table-cell">Tipo</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Estado</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 hidden sm:table-cell">Fecha</th>
+                  <th>Expediente</th>
+                  <th className="hidden md:table-cell">Cliente</th>
+                  <th className="hidden lg:table-cell">Tipo</th>
+                  <th>Estado</th>
+                  <th className="hidden sm:table-cell">Fecha</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {data?.data?.length === 0 && (
                   <tr><td colSpan={5} className="text-center py-12 text-gray-400">Sin resultados</td></tr>
                 )}
                 {data?.data?.map(s => (
-                  <tr key={s.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <Link to={`/admin/solicitudes/${s.id}`} className="text-certia-green font-semibold hover:underline">
+                  <tr key={s.id}>
+                    <td>
+                      <Link to={`/admin/solicitudes/${s.id}`} className="c-exp">
                         {s.nExpediente}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{s.cliente?.nombreEmpresa}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs hidden lg:table-cell">
+                    <td className="text-gray-600 hidden md:table-cell">{s.cliente?.nombreEmpresa}</td>
+                    <td className="text-gray-500 text-xs hidden lg:table-cell">
                       {s.tipoCert?.codigo} — {s.tipoCert?.nombre}
                     </td>
-                    <td className="px-4 py-3"><EstadoBadge estado={s.estadoActual} /></td>
-                    <td className="px-4 py-3 text-gray-400 hidden sm:table-cell">{formatFecha(s.creadoEn)}</td>
+                    <td><EstadoBadge estado={s.estadoActual} /></td>
+                    <td className="text-gray-400 hidden sm:table-cell">{formatFecha(s.creadoEn)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {/* Paginación */}
-            <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
-              <span>Total: {data?.total || 0}</span>
-              <div className="flex gap-2">
-                <button
-                  disabled={page <= 1}
-                  onClick={() => setParams({ estado, page: String(page - 1) })}
-                  className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
-                >← Anterior</button>
-                <button
-                  disabled={!data?.data?.length || data.data.length < 20}
-                  onClick={() => setParams({ estado, page: String(page + 1) })}
-                  className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
-                >Siguiente →</button>
-              </div>
+          </div>
+          {/* Paginación */}
+          <div className="px-4 py-3 flex items-center justify-between text-sm text-gray-500" style={{ borderTop: '1px solid var(--border)' }}>
+            <span>Total: {data?.total || 0}</span>
+            <div className="flex gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setParams({ estado, page: String(page - 1) })}
+                className="c-btn c-btn--ghost c-btn--sm"
+              >← Anterior</button>
+              <button
+                disabled={!data?.data?.length || data.data.length < 20}
+                onClick={() => setParams({ estado, page: String(page + 1) })}
+                className="c-btn c-btn--ghost c-btn--sm"
+              >Siguiente →</button>
             </div>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

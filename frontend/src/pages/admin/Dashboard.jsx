@@ -45,19 +45,28 @@ function useMetricas() {
 
 function TarjetaEstado({ estado, cantidad }) {
   return (
-    <Link to={`/admin/solicitudes?estado=${estado}`} className="block bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition">
+    <Link to={`/admin/solicitudes?estado=${estado}`} className="c-card" style={{ display: 'block', padding: '14px 16px' }}>
       <EstadoBadge estado={estado} />
-      <p className="mt-2 text-3xl font-bold text-gray-800">{cantidad}</p>
+      <p className="mt-2" style={{ fontSize: 28, fontWeight: 700, color: 'var(--green-700)', lineHeight: 1 }}>{cantidad}</p>
     </Link>
   );
 }
 
+const ALERTA_STYLES = {
+  red:   { borderColor: 'var(--c-danger, #dc2626)',  background: '#fef2f2' },
+  amber: { borderColor: 'var(--c-gold,   #d97706)',  background: '#fffbeb' },
+  blue:  { borderColor: '#3b82f6',                   background: '#eff6ff' },
+};
+
 function TarjetaAlerta({ titulo, cantidad, color, link }) {
-  const colores = { red: 'border-red-200 bg-red-50', amber: 'border-amber-200 bg-amber-50', blue: 'border-blue-200 bg-blue-50' };
   return (
-    <Link to={link} className={`block rounded-xl border p-4 hover:shadow-md transition ${colores[color]}`}>
-      <p className="text-sm font-medium text-gray-600">{titulo}</p>
-      <p className="text-3xl font-bold mt-1">{cantidad}</p>
+    <Link
+      to={link}
+      className="c-card"
+      style={{ display: 'block', padding: '14px 16px', borderLeftWidth: 3, ...ALERTA_STYLES[color] }}
+    >
+      <div style={{ fontSize: 12.5, color: 'var(--text-2)', marginBottom: 4 }}>{titulo}</div>
+      <div style={{ fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{cantidad}</div>
     </Link>
   );
 }
@@ -66,28 +75,21 @@ export default function Dashboard() {
   const { data, isLoading, isError, refetch } = useMetricas();
 
   if (isLoading) return (
-    <div className="flex items-center justify-center h-64 text-gray-500">
-      Cargando...
-    </div>
+    <div className="flex items-center justify-center h-64 text-gray-500">Cargando...</div>
   );
 
   if (isError || !data) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
       <p className="text-gray-500 text-sm">Error al cargar las metricas</p>
-      <button
-        onClick={() => refetch()}
-        className="px-4 py-2 bg-green-700 text-white rounded-lg text-sm hover:bg-green-800"
-      >
-        Reintentar
-      </button>
+      <button onClick={() => refetch()} className="c-btn c-btn--primary c-btn--sm">Reintentar</button>
     </div>
   );
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 text-sm mt-1">Resumen del sistema en tiempo real</p>
+        <h1 className="page-title">Dashboard</h1>
+        <p className="page-sub">Resumen del sistema en tiempo real</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -112,7 +114,7 @@ export default function Dashboard() {
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold text-gray-800 mb-3">Solicitudes activas por estado</h2>
+        <h2 className="c-section-title" style={{ marginBottom: 12 }}>Solicitudes activas por estado</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {ESTADOS.map(e => (
             <TarjetaEstado key={e} estado={e} cantidad={data?.porEstado?.[e] || 0} />
@@ -122,26 +124,26 @@ export default function Dashboard() {
 
       {data?.porVencer?.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold text-gray-800 mb-3">Certificados proximos a vencer</h2>
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+          <h2 className="c-section-title" style={{ marginBottom: 12 }}>Certificados proximos a vencer</h2>
+          <div className="c-table-wrap">
+            <table>
+              <thead>
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Expediente</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Cliente</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Vencimiento</th>
+                  <th>Expediente</th>
+                  <th>Cliente</th>
+                  <th>Vencimiento</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {data.porVencer.map(s => (
-                  <tr key={s.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <Link to={`/admin/solicitudes/${s.id}`} className="text-green-700 font-medium hover:underline">
+                  <tr key={s.id}>
+                    <td>
+                      <Link to={`/admin/solicitudes/${s.id}`} className="c-exp">
                         {s.nExpediente}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{s.cliente?.nombreEmpresa}</td>
-                    <td className="px-4 py-3 text-red-600 font-medium">
+                    <td className="text-gray-600">{s.cliente?.nombreEmpresa}</td>
+                    <td className="text-red-600 font-medium">
                       {s.fechaVencimiento ? new Date(s.fechaVencimiento).toLocaleDateString('es-UY') : '-'}
                     </td>
                   </tr>
